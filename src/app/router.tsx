@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { createBrowserRouter } from "react-router-dom";
 import MainLayout from "@/layouts/MainLayout";
+import Help from "@/pages/help/Help";
 
 const HomePage = lazy(() => import("@/pages/home/HomePage"));
 const ProductsPage = lazy(() => import("@/pages/products/ProductsPage"));
@@ -24,6 +25,7 @@ export const router = createBrowserRouter([
       { path: "/producto/:id", element: <ProductDetailPage /> },
       { path: "/carrito", element: <CartPage /> },
       { path: "/checkout", element: <CheckoutPage /> },
+      { path: "/ayuda", element: <Help /> },
     ],
   },
   { path: "*", element: <NotFoundPage /> },

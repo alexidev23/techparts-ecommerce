@@ -1,19 +1,19 @@
-import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Search, ShoppingCart, Menu, Smartphone } from 'lucide-react';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
+import { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { Search, ShoppingCart, Menu, Smartphone } from "lucide-react";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from './ui/sheet';
-import { categories } from '../data/products';
-import { Badge } from './ui/badge';
-import { ModeToggle } from './mode-toggle';
-import { useCart } from '@/context/CartContext';
+} from "./ui/sheet";
+import { categories } from "../data/products";
+import { Badge } from "./ui/badge";
+import { ModeToggle } from "./mode-toggle";
+import { useCart } from "@/context/CartContext";
 
 export function Header() {
   const { totalItems } = useCart();
@@ -25,7 +25,6 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-backdrop-filter:bg-white/80 dark:bg-slate-950/95 dark:supports-backdrop-filter:bg-slate-950/80">
-
       {/* Top Bar */}
       <div className="border-b bg-slate-50 dark:bg-slate-900">
         <div className="container mx-auto px-4">
@@ -34,10 +33,16 @@ export function Header() {
               Envío gratis en compras superiores a $50.000
             </p>
             <div className="hidden items-center gap-4 md:flex">
-              <Link to="#" className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">
+              <Link
+                to="/ayuda"
+                className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+              >
                 Ayuda
               </Link>
-              <Link to="#" className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">
+              <Link
+                to="#contacto"
+                className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+              >
                 Contacto
               </Link>
             </div>
@@ -121,16 +126,18 @@ export function Header() {
                   >
                     Productos
                   </Link>
-                  {categories.filter(c => c !== 'Todos').map(category => (
-                    <Link
-                      key={category}
-                      to={`/productos?category=${category}`}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="pl-4 text-slate-600 hover:text-blue-600 dark:text-slate-400"
-                    >
-                      {category}
-                    </Link>
-                  ))}
+                  {categories
+                    .filter((c) => c !== "Todos")
+                    .map((category) => (
+                      <Link
+                        key={category}
+                        to={`/productos?category=${category}`}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="pl-4 text-slate-600 hover:text-blue-600 dark:text-slate-400"
+                      >
+                        {category}
+                      </Link>
+                    ))}
                 </nav>
               </SheetContent>
             </Sheet>
@@ -159,22 +166,24 @@ export function Header() {
             <Link
               to="/productos"
               className={`text-sm transition-colors hover:text-blue-600 ${
-                isActive('/productos')
-                  ? 'text-blue-600'
-                  : 'text-slate-600 dark:text-slate-400'
+                isActive("/productos")
+                  ? "text-blue-600"
+                  : "text-slate-600 dark:text-slate-400"
               }`}
             >
               Todos los productos
             </Link>
-            {categories.filter(c => c !== 'Todos').map(category => (
-              <Link
-                key={category}
-                to={`/productos?category=${category}`}
-                className="text-sm text-slate-600 transition-colors hover:text-blue-600 dark:text-slate-400"
-              >
-                {category}
-              </Link>
-            ))}
+            {categories
+              .filter((c) => c !== "Todos")
+              .map((category) => (
+                <Link
+                  key={category}
+                  to={`/productos?category=${category}`}
+                  className="text-sm text-slate-600 transition-colors hover:text-blue-600 dark:text-slate-400"
+                >
+                  {category}
+                </Link>
+              ))}
           </nav>
         </div>
       </div>
