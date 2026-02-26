@@ -1,23 +1,31 @@
-import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { Star, Plus, Minus, ShoppingCart, ChevronLeft, Truck, Shield, Package } from 'lucide-react';
-import { Button } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
-import { Separator } from '../components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { ProductCard } from '../components/ProductCard';
-import { products } from '../data/products';
-import { toast } from 'sonner';
-import { useCart } from '@/context/CartContext';
+import { ProductCard } from "@/components/ProductCard";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useCart } from "@/context/CartContext";
+import { products } from "@/data/products";
+import {
+  ChevronLeft,
+  Minus,
+  Package,
+  Plus,
+  Shield,
+  ShoppingCart,
+  Star,
+  Truck,
+} from "lucide-react";
+import { useState } from "react";
+import { useParams, Link } from "react-router-dom";
+import { toast } from "sonner";
 
-
-export default function ProductDetail() {
+export default function ProductDetailPage() {
   const { id } = useParams();
   const { addToCart } = useCart();
   const [quantity, setQuantity] = useState(1);
 
-  const product = products.find(p => p.id === id);
-  
+  const product = products.find((p) => p.id === id);
+
   if (!product) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
@@ -30,11 +38,11 @@ export default function ProductDetail() {
   }
 
   const relatedProducts = products
-    .filter(p => p.category === product.category && p.id !== product.id)
+    .filter((p) => p.category === product.category && p.id !== product.id)
     .slice(0, 4);
 
   const formatPrice = (price: number) => {
-    return `$${price.toLocaleString('es-AR')}`;
+    return `$${price.toLocaleString("es-AR")}`;
   };
 
   const handleAddToCart = () => {
@@ -95,7 +103,7 @@ export default function ProductDetail() {
                 {product.category}
               </p>
               <h1 className="mt-2">{product.name}</h1>
-              
+
               {/* Rating */}
               <div className="mt-3 flex items-center gap-2">
                 <div className="flex items-center gap-1">
@@ -104,8 +112,8 @@ export default function ProductDetail() {
                       key={i}
                       className={`h-5 w-5 ${
                         i < Math.floor(product.rating)
-                          ? 'fill-yellow-400 text-yellow-400'
-                          : 'text-slate-300 dark:text-slate-600'
+                          ? "fill-yellow-400 text-yellow-400"
+                          : "text-slate-300 dark:text-slate-600"
                       }`}
                     />
                   ))}
@@ -131,7 +139,12 @@ export default function ProductDetail() {
                       {formatPrice(product.originalPrice)}
                     </span>
                     <Badge variant="destructive">
-                      {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% OFF
+                      {Math.round(
+                        ((product.originalPrice - product.price) /
+                          product.originalPrice) *
+                          100,
+                      )}
+                      % OFF
                     </Badge>
                   </>
                 )}
@@ -145,9 +158,7 @@ export default function ProductDetail() {
                   ✓ Stock disponible ({product.stock} unidades)
                 </p>
               ) : (
-                <p className="text-red-600 dark:text-red-400">
-                  ✗ Sin stock
-                </p>
+                <p className="text-red-600 dark:text-red-400">✗ Sin stock</p>
               )}
             </div>
 
@@ -227,7 +238,10 @@ export default function ProductDetail() {
               <TabsTrigger value="specs">Especificaciones</TabsTrigger>
               <TabsTrigger value="shipping">Envío</TabsTrigger>
             </TabsList>
-            <TabsContent value="description" className="mt-6 rounded-lg border bg-white p-6 dark:bg-slate-900">
+            <TabsContent
+              value="description"
+              className="mt-6 rounded-lg border bg-white p-6 dark:bg-slate-900"
+            >
               <h3 className="mb-4">Descripción del producto</h3>
               <p className="text-slate-600 dark:text-slate-400">
                 {product.description}
@@ -238,41 +252,50 @@ export default function ProductDetail() {
                 Incluye todo lo necesario para una instalación exitosa.
               </p>
             </TabsContent>
-            <TabsContent value="specs" className="mt-6 rounded-lg border bg-white p-6 dark:bg-slate-900">
+            <TabsContent
+              value="specs"
+              className="mt-6 rounded-lg border bg-white p-6 dark:bg-slate-900"
+            >
               <h3 className="mb-4">Especificaciones técnicas</h3>
               <div className="space-y-3">
                 <div className="flex justify-between border-b pb-2">
-                  <span className="text-slate-600 dark:text-slate-400">Marca:</span>
+                  <span className="text-slate-600 dark:text-slate-400">
+                    Marca:
+                  </span>
                   <span>{product.brand}</span>
                 </div>
                 <div className="flex justify-between border-b pb-2">
-                  <span className="text-slate-600 dark:text-slate-400">Categoría:</span>
+                  <span className="text-slate-600 dark:text-slate-400">
+                    Categoría:
+                  </span>
                   <span>{product.category}</span>
                 </div>
                 <div className="flex justify-between border-b pb-2">
-                  <span className="text-slate-600 dark:text-slate-400">Stock:</span>
+                  <span className="text-slate-600 dark:text-slate-400">
+                    Stock:
+                  </span>
                   <span>{product.stock} unidades</span>
                 </div>
                 <div className="flex justify-between border-b pb-2">
-                  <span className="text-slate-600 dark:text-slate-400">Garantía:</span>
+                  <span className="text-slate-600 dark:text-slate-400">
+                    Garantía:
+                  </span>
                   <span>6 meses</span>
                 </div>
               </div>
             </TabsContent>
-            <TabsContent value="shipping" className="mt-6 rounded-lg border bg-white p-6 dark:bg-slate-900">
+            <TabsContent
+              value="shipping"
+              className="mt-6 rounded-lg border bg-white p-6 dark:bg-slate-900"
+            >
               <h3 className="mb-4">Información de envío</h3>
               <div className="space-y-4 text-slate-600 dark:text-slate-400">
-                <p>
-                  • Envío estándar: 3-5 días hábiles - $500
-                </p>
-                <p>
-                  • Envío express: 24-48 horas - $1.500
-                </p>
-                <p>
-                  • Envío gratis en compras superiores a $50.000
-                </p>
+                <p>• Envío estándar: 3-5 días hábiles - $500</p>
+                <p>• Envío express: 24-48 horas - $1.500</p>
+                <p>• Envío gratis en compras superiores a $50.000</p>
                 <p className="mt-6">
-                  Los pedidos realizados antes de las 14:00 se despachan el mismo día.
+                  Los pedidos realizados antes de las 14:00 se despachan el
+                  mismo día.
                 </p>
               </div>
             </TabsContent>
@@ -284,7 +307,7 @@ export default function ProductDetail() {
           <div className="mt-16">
             <h2 className="mb-8">Productos relacionados</h2>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              {relatedProducts.map(product => (
+              {relatedProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>

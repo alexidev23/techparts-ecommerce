@@ -1,21 +1,22 @@
-import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Filter } from 'lucide-react';
-import { ProductCard } from '../components/ProductCard';
-import { Button } from '../components/ui/button';
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
+import { Filter } from "lucide-react";
+
+import type { Product } from "@/types";
+import type { FilterOptions } from "@/types";
+import { FilterSidebar } from "@/components/FilterSidebar";
+import { products } from "@/data/products";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from '../components/ui/sheet';
-import { products } from '../data/products';
-import type { Product } from '@/types';
-import type { FilterOptions } from '@/types';
-import { FilterSidebar } from '@/components/FilterSidebar';
+} from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { ProductCard } from "@/components/ProductCard";
 
-export default function Products() {
+export default function ProductsPage() {
   const [searchParams] = useSearchParams();
 
   const [filteredProducts, setFilteredProducts] = useState<Product[]>(products);
@@ -24,51 +25,48 @@ export default function Products() {
     brands: [],
     categories: [],
     priceRange: [0, 150000],
-    sortBy: 'popular',
+    sortBy: "popular",
   });
-
-  useEffect(() => {
-    applyFilters();
-  }, [filters, searchParams]);
 
   const applyFilters = () => {
     let filtered = [...products];
 
     // Category from URL
-    const urlCategory = searchParams.get('category');
+    const urlCategory = searchParams.get("category");
     if (urlCategory) {
-      filtered = filtered.filter(p => p.category === urlCategory);
+      filtered = filtered.filter((p) => p.category === urlCategory);
     }
 
     // Brand filter
     if (filters.brands.length > 0) {
-      filtered = filtered.filter(p => filters.brands.includes(p.brand));
+      filtered = filtered.filter((p) => filters.brands.includes(p.brand));
     }
 
     // Category filter
     if (filters.categories.length > 0) {
-      filtered = filtered.filter(p => filters.categories.includes(p.category));
+      filtered = filtered.filter((p) =>
+        filters.categories.includes(p.category),
+      );
     }
 
     // Price range
     filtered = filtered.filter(
-      p =>
-        p.price >= filters.priceRange[0] &&
-        p.price <= filters.priceRange[1]
+      (p) =>
+        p.price >= filters.priceRange[0] && p.price <= filters.priceRange[1],
     );
 
     // Sort options
     switch (filters.sortBy) {
-      case 'price-asc':
+      case "price-asc":
         filtered.sort((a, b) => a.price - b.price);
         break;
-      case 'price-desc':
+      case "price-desc":
         filtered.sort((a, b) => b.price - a.price);
         break;
-      case 'newest':
+      case "newest":
         filtered.reverse();
         break;
-      case 'popular':
+      case "popular":
       default:
         filtered.sort((a, b) => b.rating - a.rating);
         break;
@@ -77,9 +75,13 @@ export default function Products() {
     setFilteredProducts(filtered);
   };
 
+  useEffect(() => {
+    applyFilters();
+  }, [filters, searchParams]);
+
   // CORREGIDO: ya no usa `any`
   const handleFilterChange = (newFilters: Partial<FilterOptions>) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
       ...newFilters,
     }));
@@ -139,12 +141,12 @@ export default function Products() {
             {/* Product grid */}
             {filteredProducts.length > 0 ? (
               <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-                {filteredProducts.map(product => (
+                {filteredProducts.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
               </div>
             ) : (
-              <div className="flex min-h-[400px] items-center justify-center rounded-lg border bg-white dark:bg-slate-900">
+              <div className="flex min-h-100 items-center justify-center rounded-lg border bg-white dark:bg-slate-900">
                 <div className="text-center">
                   <p className="text-slate-600 dark:text-slate-400">
                     No se encontraron productos con los filtros seleccionados
@@ -157,7 +159,7 @@ export default function Products() {
                         brands: [],
                         categories: [],
                         priceRange: [0, 150000],
-                        sortBy: 'popular',
+                        sortBy: "popular",
                       })
                     }
                   >

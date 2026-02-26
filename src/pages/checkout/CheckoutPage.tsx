@@ -1,37 +1,37 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { CreditCard, Truck, CheckCircle2, ChevronLeft } from 'lucide-react';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { Separator } from '../components/ui/separator';
-import { RadioGroup, RadioGroupItem } from '../components/ui/radio-group';
-import { useCart } from '@/context/CartContext';
-import { toast } from 'sonner';
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { CreditCard, Truck, CheckCircle2, ChevronLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useCart } from "@/context/CartContext";
+import { toast } from "sonner";
 
-export default function Checkout() {
+export default function CheckoutPage() {
   const { items, totalPrice, clearCart } = useCart();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
-    email: '',
-    firstName: '',
-    lastName: '',
-    phone: '',
-    address: '',
-    city: '',
-    postalCode: '',
-    shippingMethod: 'standard',
-    paymentMethod: 'credit-card',
+    email: "",
+    firstName: "",
+    lastName: "",
+    phone: "",
+    address: "",
+    city: "",
+    postalCode: "",
+    shippingMethod: "standard",
+    paymentMethod: "credit-card",
   });
 
   const formatPrice = (price: number) => {
-    return `$${price.toLocaleString('es-AR')}`;
+    return `$${price.toLocaleString("es-AR")}`;
   };
 
   const getShippingCost = () => {
     if (totalPrice >= 50000) return 0;
-    return formData.shippingMethod === 'express' ? 1500 : 500;
+    return formData.shippingMethod === "express" ? 1500 : 500;
   };
 
   const shipping = getShippingCost();
@@ -43,17 +43,17 @@ export default function Checkout() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (step === 1) {
       setStep(2);
     } else if (step === 2) {
       setStep(3);
     } else {
       // Process order
-      toast.success('¡Compra realizada con éxito!');
+      toast.success("¡Compra realizada con éxito!");
       clearCart();
       setTimeout(() => {
-        navigate('/');
+        navigate("/");
       }, 2000);
     }
   };
@@ -95,16 +95,16 @@ export default function Checkout() {
         {/* Progress Steps */}
         <div className="mb-8 flex items-center justify-center gap-4">
           {[
-            { num: 1, label: 'Envío' },
-            { num: 2, label: 'Pago' },
-            { num: 3, label: 'Confirmación' },
+            { num: 1, label: "Envío" },
+            { num: 2, label: "Pago" },
+            { num: 3, label: "Confirmación" },
           ].map((s, idx) => (
             <div key={s.num} className="flex items-center">
               <div
                 className={`flex h-8 w-8 items-center justify-center rounded-full text-sm ${
                   step >= s.num
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                    ? "bg-blue-600 text-white"
+                    : "bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
                 }`}
               >
                 {s.num}
@@ -114,8 +114,8 @@ export default function Checkout() {
                 <div
                   className={`mx-2 h-0.5 w-8 md:w-16 ${
                     step > s.num
-                      ? 'bg-blue-600'
-                      : 'bg-slate-200 dark:bg-slate-800'
+                      ? "bg-blue-600"
+                      : "bg-slate-200 dark:bg-slate-800"
                   }`}
                 />
               )}
@@ -232,7 +232,10 @@ export default function Checkout() {
                         <div className="flex items-center justify-between rounded-lg border p-4">
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="standard" id="standard" />
-                            <Label htmlFor="standard" className="cursor-pointer">
+                            <Label
+                              htmlFor="standard"
+                              className="cursor-pointer"
+                            >
                               <div>
                                 <p>Envío estándar</p>
                                 <p className="text-sm text-slate-500 dark:text-slate-400">
@@ -241,7 +244,7 @@ export default function Checkout() {
                               </div>
                             </Label>
                           </div>
-                          <span>{totalPrice >= 50000 ? 'Gratis' : '$500'}</span>
+                          <span>{totalPrice >= 50000 ? "Gratis" : "$500"}</span>
                         </div>
                         <div className="flex items-center justify-between rounded-lg border p-4">
                           <div className="flex items-center space-x-2">
@@ -338,7 +341,9 @@ export default function Checkout() {
                     <div>
                       <h3 className="mb-3 text-sm">Datos de envío</h3>
                       <div className="rounded-lg border p-4 text-sm">
-                        <p>{formData.firstName} {formData.lastName}</p>
+                        <p>
+                          {formData.firstName} {formData.lastName}
+                        </p>
                         <p className="text-slate-600 dark:text-slate-400">
                           {formData.email}
                         </p>
@@ -346,7 +351,8 @@ export default function Checkout() {
                           {formData.phone}
                         </p>
                         <p className="mt-2 text-slate-600 dark:text-slate-400">
-                          {formData.address}, {formData.city} ({formData.postalCode})
+                          {formData.address}, {formData.city} (
+                          {formData.postalCode})
                         </p>
                       </div>
                     </div>
@@ -356,9 +362,12 @@ export default function Checkout() {
                       <h3 className="mb-3 text-sm">Método de pago</h3>
                       <div className="rounded-lg border p-4 text-sm">
                         <p>
-                          {formData.paymentMethod === 'credit-card' && 'Tarjeta de crédito/débito'}
-                          {formData.paymentMethod === 'transfer' && 'Transferencia bancaria'}
-                          {formData.paymentMethod === 'mercadopago' && 'Mercado Pago'}
+                          {formData.paymentMethod === "credit-card" &&
+                            "Tarjeta de crédito/débito"}
+                          {formData.paymentMethod === "transfer" &&
+                            "Transferencia bancaria"}
+                          {formData.paymentMethod === "mercadopago" &&
+                            "Mercado Pago"}
                         </p>
                       </div>
                     </div>
@@ -367,8 +376,11 @@ export default function Checkout() {
                     <div>
                       <h3 className="mb-3 text-sm">Productos</h3>
                       <div className="space-y-3">
-                        {items.map(item => (
-                          <div key={item.product.id} className="flex gap-3 rounded-lg border p-3">
+                        {items.map((item) => (
+                          <div
+                            key={item.product.id}
+                            className="flex gap-3 rounded-lg border p-3"
+                          >
                             <div className="h-16 w-16 shrink-0 overflow-hidden rounded border">
                               <img
                                 src={item.product.image}
@@ -384,7 +396,9 @@ export default function Checkout() {
                                 </p>
                               </div>
                               <p className="text-sm">
-                                {formatPrice(item.product.price * item.quantity)}
+                                {formatPrice(
+                                  item.product.price * item.quantity,
+                                )}
                               </p>
                             </div>
                           </div>
@@ -418,7 +432,7 @@ export default function Checkout() {
               <h2 className="mb-6">Resumen</h2>
 
               <div className="mb-6 space-y-3">
-                {items.map(item => (
+                {items.map((item) => (
                   <div key={item.product.id} className="flex gap-3">
                     <div className="h-16 w-16 shrink-0 overflow-hidden rounded border">
                       <img
@@ -444,11 +458,15 @@ export default function Checkout() {
 
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-slate-600 dark:text-slate-400">Subtotal</span>
+                  <span className="text-slate-600 dark:text-slate-400">
+                    Subtotal
+                  </span>
                   <span>{formatPrice(totalPrice)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-600 dark:text-slate-400">Envío</span>
+                  <span className="text-slate-600 dark:text-slate-400">
+                    Envío
+                  </span>
                   <span>
                     {shipping === 0 ? (
                       <span className="text-green-600">Gratis</span>

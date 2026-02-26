@@ -5,10 +5,10 @@ import HomeHeroImage from "@/assets/img/img-home1.jpg";
 import { products } from "@/data/products";
 import { ProductCard } from "@/components/ProductCard";
 
-export default function Home() {
-  const featuredProducts = products.filter(p => p.featured);
-  const bestsellerProducts = products.filter(p => p.bestseller);
-  const saleProducts = products.filter(p => p.onSale);
+export default function HomePage() {
+  const featuredProducts = products.filter((p) => p.featured);
+  const bestsellerProducts = products.filter((p) => p.bestseller);
+  const saleProducts = products.filter((p) => p.onSale);
 
   return (
     <div className="min-h-screen">
@@ -26,7 +26,11 @@ export default function Home() {
               </p>
               <div className="flex flex-col gap-3 sm:flex-row">
                 <Link to="/productos">
-                  <Button size="lg" variant="secondary" className="w-full sm:w-auto">
+                  <Button
+                    size="lg"
+                    variant="secondary"
+                    className="w-full sm:w-auto"
+                  >
                     Ver productos
                     <ChevronRight className="ml-2 h-5 w-5" />
                   </Button>
@@ -122,7 +126,7 @@ export default function Home() {
           </Link>
         </div>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {featuredProducts.map(product => (
+          {featuredProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
         </div>
@@ -146,7 +150,7 @@ export default function Home() {
             </Link>
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {bestsellerProducts.slice(0, 4).map(product => (
+            {bestsellerProducts.slice(0, 4).map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
@@ -171,7 +175,7 @@ export default function Home() {
             </Link>
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {saleProducts.map(product => (
+            {saleProducts.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>

@@ -1,14 +1,14 @@
-import { Link } from 'react-router-dom';
-import { Trash2, Plus, Minus, ShoppingBag } from 'lucide-react';
-import { Button } from '../components/ui/button';
-import { Separator } from '../components/ui/separator';
-import { useCart } from '@/context/CartContext';
+import { Link } from "react-router-dom";
+import { Trash2, Plus, Minus, ShoppingBag } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { useCart } from "@/context/CartContext";
 
-export default function Carrito() {
+export default function CartPage() {
   const { items, removeFromCart, updateQuantity, totalPrice } = useCart();
 
   const formatPrice = (price: number) => {
-    return `$${price.toLocaleString('es-AR')}`;
+    return `$${price.toLocaleString("es-AR")}`;
   };
 
   const shipping = totalPrice >= 50000 ? 0 : 500;
@@ -43,7 +43,7 @@ export default function Carrito() {
         <div className="grid gap-8 lg:grid-cols-3">
           {/* Cart Items */}
           <div className="lg:col-span-2 space-y-4">
-            {items.map(item => (
+            {items.map((item) => (
               <div
                 key={item.product.id}
                 className="rounded-lg border bg-white p-4 dark:bg-slate-900 md:p-6"
@@ -139,7 +139,9 @@ export default function Carrito() {
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-600 dark:text-slate-400">
-                    Subtotal ({items.reduce((sum, item) => sum + item.quantity, 0)} productos)
+                    Subtotal (
+                    {items.reduce((sum, item) => sum + item.quantity, 0)}{" "}
+                    productos)
                   </span>
                   <span>{formatPrice(totalPrice)}</span>
                 </div>
@@ -159,7 +161,8 @@ export default function Carrito() {
 
                 {totalPrice < 50000 && (
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Agrega {formatPrice(50000 - totalPrice)} más para envío gratis
+                    Agrega {formatPrice(50000 - totalPrice)} más para envío
+                    gratis
                   </p>
                 )}
 
