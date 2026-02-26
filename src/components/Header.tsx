@@ -39,12 +39,12 @@ export function Header() {
               >
                 Ayuda
               </Link>
-              <Link
-                to="#contacto"
+              <a
+                href="#contacto"
                 className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
               >
                 Contacto
-              </Link>
+              </a>
             </div>
           </div>
         </div>

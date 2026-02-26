@@ -1,5 +1,5 @@
-import { Link } from 'react-router-dom';
-import { Smartphone, Facebook, Instagram, Twitter } from 'lucide-react';
+import { Link } from "react-router-dom";
+import { Smartphone, Facebook, Instagram, Twitter } from "lucide-react";
 
 export function Footer() {
   return (
@@ -64,22 +64,34 @@ export function Footer() {
             <h3 className="mb-4">Información</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link to="#" className="text-slate-600 hover:text-blue-600 dark:text-slate-400">
+                <Link
+                  to="#"
+                  className="text-slate-600 hover:text-blue-600 dark:text-slate-400"
+                >
                   Sobre nosotros
                 </Link>
               </li>
               <li>
-                <Link to="#" className="text-slate-600 hover:text-blue-600 dark:text-slate-400">
+                <Link
+                  to="#"
+                  className="text-slate-600 hover:text-blue-600 dark:text-slate-400"
+                >
                   Envíos y devoluciones
                 </Link>
               </li>
               <li>
-                <Link to="#" className="text-slate-600 hover:text-blue-600 dark:text-slate-400">
+                <Link
+                  to="#"
+                  className="text-slate-600 hover:text-blue-600 dark:text-slate-400"
+                >
                   Garantías
                 </Link>
               </li>
               <li>
-                <Link to="#" className="text-slate-600 hover:text-blue-600 dark:text-slate-400">
+                <Link
+                  to="#"
+                  className="text-slate-600 hover:text-blue-600 dark:text-slate-400"
+                >
                   Términos y condiciones
                 </Link>
               </li>
@@ -87,7 +99,7 @@ export function Footer() {
           </div>
 
           {/* Contact */}
-          <div>
+          <div id="contacto">
             <h3 className="mb-4">Contacto</h3>
             <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
               <li>Email: info@techparts.com</li>
