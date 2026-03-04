@@ -2,8 +2,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Filter } from "lucide-react";
 
-import type { Product } from "@/types";
-import type { FilterOptions } from "@/types";
+import type { Product, FilterOptions } from "@/types";
 import { FilterSidebar } from "@/components/FilterSidebar";
 import { products } from "@/data/products";
 import {
@@ -18,7 +17,6 @@ import { ProductCard } from "@/components/ProductCard";
 
 export default function ProductsPage() {
   const [searchParams] = useSearchParams();
-
   const [filteredProducts, setFilteredProducts] = useState<Product[]>(products);
 
   const [filters, setFilters] = useState<FilterOptions>({
@@ -35,6 +33,14 @@ export default function ProductsPage() {
     const urlCategory = searchParams.get("category");
     if (urlCategory) {
       filtered = filtered.filter((p) => p.category === urlCategory);
+    }
+
+    // Search from URL
+    const searchQuery = searchParams.get("search")?.toLowerCase();
+    if (searchQuery) {
+      filtered = filtered.filter((p) =>
+        p.name.toLowerCase().includes(searchQuery),
+      );
     }
 
     // Brand filter
@@ -79,7 +85,6 @@ export default function ProductsPage() {
     applyFilters();
   }, [filters, searchParams]);
 
-  // CORREGIDO: ya no usa `any`
   const handleFilterChange = (newFilters: Partial<FilterOptions>) => {
     setFilters((prev) => ({
       ...prev,
@@ -87,32 +92,55 @@ export default function ProductsPage() {
     }));
   };
 
+  // Read search param
+  const searchQuery = searchParams.get("search");
+
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+    <main className="min-h-screen bg-slate-50 dark:bg-slate-950">
+      {/* <Helmet>
+        <title>Productos | TechParts</title>
+        <meta
+          name="description"
+          content="Explora nuestra selección de repuestos y accesorios tecnológicos al mejor precio."
+        />
+      </Helmet> */}
+
       <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1>Productos</h1>
-          <p className="text-slate-600 dark:text-slate-400">
+        {/* Page Header */}
+        <header className="mb-8">
+          <h1
+            id="products-heading"
+            className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100"
+          >
+            Productos
+          </h1>
+          <p className="mt-2 text-slate-600 dark:text-slate-400">
             Explora nuestra amplia selección de repuestos y accesorios
           </p>
-        </div>
+        </header>
 
         <div className="flex gap-8">
           {/* Desktop Filters */}
-          <aside className="hidden w-64 shrink-0 lg:block">
+          <aside
+            className="hidden w-64 shrink-0 lg:block"
+            aria-label="Filtros de productos"
+          >
             <div className="sticky top-24 rounded-lg border bg-white p-6 dark:bg-slate-900">
               <FilterSidebar onFilterChange={handleFilterChange} />
             </div>
           </aside>
 
-          {/* Products Grid */}
-          <div className="flex-1">
+          {/* Products Section */}
+          <section className="flex-1" aria-labelledby="products-heading">
             {/* Mobile Filter Button */}
             <div className="mb-6 flex items-center justify-between lg:hidden">
-              <p className="text-slate-600 dark:text-slate-400">
+              <p
+                className="text-slate-600 dark:text-slate-400"
+                aria-live="polite"
+              >
                 {filteredProducts.length} productos
               </p>
+
               <Sheet>
                 <SheetTrigger asChild>
                   <Button variant="outline" size="sm">
@@ -120,6 +148,7 @@ export default function ProductsPage() {
                     Filtros
                   </Button>
                 </SheetTrigger>
+
                 <SheetContent side="left" className="w-80 overflow-y-auto">
                   <SheetHeader>
                     <SheetTitle>Filtros</SheetTitle>
@@ -133,12 +162,15 @@ export default function ProductsPage() {
 
             {/* Desktop count */}
             <div className="mb-6 hidden lg:block">
-              <p className="text-slate-600 dark:text-slate-400">
+              <p
+                className="text-slate-600 dark:text-slate-400"
+                aria-live="polite"
+              >
                 Mostrando {filteredProducts.length} productos
               </p>
             </div>
 
-            {/* Product grid */}
+            {/* Product Grid */}
             {filteredProducts.length > 0 ? (
               <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                 {filteredProducts.map((product) => (
@@ -146,31 +178,25 @@ export default function ProductsPage() {
                 ))}
               </div>
             ) : (
-              <div className="flex min-h-100 items-center justify-center rounded-lg border bg-white dark:bg-slate-900">
+              <div className="flex min-h-75 items-center justify-center rounded-lg border bg-white dark:bg-slate-900">
                 <div className="text-center">
-                  <p className="text-slate-600 dark:text-slate-400">
-                    No se encontraron productos con los filtros seleccionados
-                  </p>
-                  <Button
-                    variant="outline"
-                    className="mt-4"
-                    onClick={() =>
-                      setFilters({
-                        brands: [],
-                        categories: [],
-                        priceRange: [0, 150000],
-                        sortBy: "popular",
-                      })
-                    }
-                  >
-                    Limpiar filtros
-                  </Button>
+                  {searchQuery ? (
+                    <p className="text-slate-600 dark:text-slate-400">
+                      El producto "
+                      <span className="font-medium">{searchQuery}</span>" no se
+                      encuentra disponible por el momento.
+                    </p>
+                  ) : (
+                    <p className="text-slate-600 dark:text-slate-400">
+                      No se encontraron productos con los filtros seleccionados.
+                    </p>
+                  )}
                 </div>
               </div>
             )}
-          </div>
+          </section>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

@@ -2,6 +2,10 @@ import { lazy, Suspense } from "react";
 import { createBrowserRouter } from "react-router-dom";
 import MainLayout from "@/layouts/MainLayout";
 import Help from "@/pages/help/Help";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
+
+const LoginPage = lazy(() => import("@/pages/auth/LoginPage"));
+const CreateAccountPage = lazy(() => import("@/pages/auth/CreateAcountPage"));
 
 const HomePage = lazy(() => import("@/pages/home/HomePage"));
 const ProductsPage = lazy(() => import("@/pages/products/ProductsPage"));
@@ -21,11 +25,31 @@ export const router = createBrowserRouter([
     ),
     children: [
       { path: "/", element: <HomePage /> },
+      { path: "/login", element: <LoginPage /> },
+      { path: "/crear-cuenta", element: <CreateAccountPage /> },
       { path: "/productos", element: <ProductsPage /> },
       { path: "/producto/:id", element: <ProductDetailPage /> },
       { path: "/carrito", element: <CartPage /> },
       { path: "/checkout", element: <CheckoutPage /> },
       { path: "/ayuda", element: <Help /> },
+
+      {
+        path: "/perfil",
+        element: (
+          <ProtectedRoute role="user">
+            <div>Perfil de usuario</div>
+          </ProtectedRoute>
+        ),
+      },
+
+      {
+        path: "/admin",
+        element: (
+          <ProtectedRoute role="admin">
+            <div>Panel de administración</div>
+          </ProtectedRoute>
+        ),
+      },
     ],
   },
   { path: "*", element: <NotFoundPage /> },
