@@ -76,17 +76,17 @@ const mockUsers: UserInfo[] = [
 
 export default function UsersTable() {
   return (
-    <div className="p-6 space-y-6">
-      {/* Encabezado de la página */}
-      <div>
-        <h1 className="text-2xl font-bold">Gestión de Usuarios</h1>
+    <section aria-labelledby="users-table-title" className="space-y-6 p-6">
+      <header>
+        <h2 id="users-table-title" className="text-2xl font-bold">
+          Gestión de Usuarios
+        </h2>
         <p className="text-muted-foreground">
           Administrá todos los usuarios de TechParts
         </p>
-      </div>
+      </header>
 
-      {/* DataTable recibe los datos mock y las columnas definidas */}
       <DataTable columns={columns} data={mockUsers} />
-    </div>
+    </section>
   );
 }
