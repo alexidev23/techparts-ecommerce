@@ -28,7 +28,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
-  const { loginUser, user } = useAuth();
+  const { loginUser } = useAuth();
   const navigate = useNavigate();
 
   const form = useForm<LoginFormData>({
@@ -49,8 +49,14 @@ export default function LoginPage() {
       return;
     }
 
-    // Usamos el user del contexto en lugar de leer localStorage
-    if (user?.role === "admin") {
+    const loggedUser = loginUser(data.email, data.password);
+
+    if (!loggedUser) {
+      form.setError("root", { message: "Correo o contraseña incorrectos" });
+      return;
+    }
+
+    if (loggedUser.role === "admin") {
       navigate("/admin");
     } else {
       navigate("/perfil");
