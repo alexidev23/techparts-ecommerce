@@ -77,13 +77,16 @@ export function Header() {
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-600">
               <Smartphone className="h-6 w-6 text-white" />
             </div>
-            <span className="hidden md:block">TechParts</span>
+            <span className="hidden md:block font-semibold">TechParts</span>
           </Link>
 
           {/* Desktop Search - Este es el search */}
           <div className="hidden flex-1 max-w-xl lg:block">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Search
+                className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                aria-hidden="true"
+              />
               <Input
                 type="search"
                 placeholder="Buscar repuestos y accesorios..."
@@ -183,7 +186,10 @@ export function Header() {
         {searchOpen && (
           <div className="pb-4 lg:hidden">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Search
+                className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                aria-hidden="true"
+              />
               <Input
                 type="search"
                 placeholder="Buscar repuestos y accesorios..."
