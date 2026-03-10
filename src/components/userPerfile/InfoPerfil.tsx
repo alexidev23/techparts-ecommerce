@@ -1,5 +1,6 @@
 import { Mail, MapPin, Pencil, Phone, User2 } from "lucide-react";
 import { Dialog, DialogTrigger } from "../ui/dialog";
+import { Button } from "../ui/button";
 
 // Componente reutilizable para cada campo del perfil
 // Usar dl/dt/dd es semánticamente correcto para pares label-valor
@@ -44,14 +45,11 @@ export default function InfoPerfil() {
         </h2>
 
         <Dialog>
-          {/* asChild para que el Button sea el trigger real, no un div extra */}
-          <DialogTrigger
-            aria-label="Editar información del perfil"
-            className="flex items-center gap-2 text-sm bg-blue-600 hover:bg-blue-800 text-gray-50 px-3 py-1.5 rounded transition-colors"
-          >
-            <Pencil aria-hidden="true" className="h-4 w-4" />
-            {/* span en lugar de p — no es un párrafo, es texto de un botón */}
-            <span>Editar</span>
+          <DialogTrigger asChild>
+            <Button size="sm" className="bg-blue-600 hover:bg-blue-800">
+              <Pencil className="h-4 w-4" aria-hidden="true" />
+              Editar
+            </Button>
           </DialogTrigger>
         </Dialog>
       </div>
