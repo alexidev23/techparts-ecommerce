@@ -1,6 +1,10 @@
+import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
-import { Button } from "../ui/button";
-import { Badge } from "../ui/badge";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { formatPrice } from "@/utils/formatters";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface FavoriteItem {
   id: string;
@@ -9,6 +13,9 @@ interface FavoriteItem {
   image: string;
   stock: number;
 }
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+// TODO: reemplazar con datos reales del backend
 
 const favorites: FavoriteItem[] = [
   {
@@ -29,57 +36,66 @@ const favorites: FavoriteItem[] = [
   },
 ];
 
+// ─── Component ────────────────────────────────────────────────────────────────
+
 export default function UserFavorite() {
   return (
-    // section en lugar de main — main va una sola vez en toda la página
     <section
       aria-labelledby="favorites-title"
-      className="w-full h-full bg-gray-50 dark:bg-gray-950 rounded-lg p-6 my-10 border border-gray-200 dark:border-gray-700"
+      className="my-10 w-full rounded-lg border border-gray-200 bg-gray-50 p-6 dark:border-gray-700 dark:bg-gray-950"
     >
-      <div className="flex items-center justify-between mb-6">
-        {/* id único para este componente */}
+      <header className="mb-6 flex items-center justify-between">
         <h2
           id="favorites-title"
           className="text-xl font-semibold text-gray-900 dark:text-gray-50"
         >
           Mis Favoritos
         </h2>
-      </div>
+      </header>
 
-      {/* ul es semánticamente correcto para una lista de items */}
       <ul className="space-y-4">
         {favorites.map((item) => (
           <li key={item.id}>
             <Card className="px-4 py-3">
-              {/* flex en el card para poner imagen+info a la izquierda y botones a la derecha */}
               <div className="flex items-center gap-4">
                 <img
                   src={item.image}
                   alt={item.name}
-                  className="w-16 h-16 object-cover rounded-md shrink-0"
+                  width={64}
+                  height={64}
+                  loading="lazy"
+                  className="h-16 w-16 shrink-0 rounded-md object-cover"
                 />
 
-                {/* Info ocupa todo el espacio disponible */}
                 <div className="flex-1">
                   <h3 className="text-lg font-medium text-gray-900 dark:text-gray-50">
                     {item.name}
                   </h3>
                   <p className="text-xl font-bold text-green-500">
-                    ${item.price.toLocaleString("es-AR")}
+                    {formatPrice(item.price)}
                   </p>
-                  <Badge variant={item.stock > 0 ? "default" : "destructive"}>
+                  <Badge
+                    variant={item.stock > 0 ? "default" : "destructive"}
+                    aria-label={
+                      item.stock > 0
+                        ? `${item.name} en stock`
+                        : `${item.name} sin stock`
+                    }
+                  >
                     {item.stock > 0 ? "En stock" : "Sin stock"}
                   </Badge>
                 </div>
 
-                {/* Botones al lado derecho, en columna pero juntos */}
-                <div className="flex flex-col gap-2 shrink-0">
-                  <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                    Ver producto
+                <div className="flex shrink-0 flex-col gap-2">
+                  <Button
+                    asChild
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    <Link to={`/productos/${item.id}`}>Ver producto</Link>
                   </Button>
                   <Button
                     variant="outline"
-                    className="text-red-500 border-red-500 hover:bg-red-500 hover:text-white"
+                    className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
                   >
                     Eliminar
                   </Button>
