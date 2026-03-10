@@ -1,3 +1,5 @@
+import type { LucideIcon } from "lucide-react";
+
 export type ProductStatus = "activo" | "inactivo";
 
 export interface Product {
@@ -7,4 +9,10 @@ export interface Product {
   price: number;
   stock: number;
   status: ProductStatus;
+}
+
+export interface ShippingFeature {
+  icon: LucideIcon;
+  title: string;
+  description: string;
 }
