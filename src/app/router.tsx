@@ -16,6 +16,9 @@ const CartPage = lazy(() => import("@/pages/cart/CartPage"));
 const CheckoutPage = lazy(() => import("@/pages/checkout/CheckoutPage"));
 const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"));
 
+const UserProfilePage = lazy(() => import("@/pages/user/UserProfilePage"));
+const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"));
+
 export const router = createBrowserRouter([
   {
     element: (
@@ -37,7 +40,7 @@ export const router = createBrowserRouter([
         path: "/perfil",
         element: (
           <ProtectedRoute role="user">
-            <div>Perfil de usuario</div>
+            <UserProfilePage />
           </ProtectedRoute>
         ),
       },
@@ -46,7 +49,7 @@ export const router = createBrowserRouter([
         path: "/admin",
         element: (
           <ProtectedRoute role="admin">
-            <div>Panel de administración</div>
+            <AdminDashboard />
           </ProtectedRoute>
         ),
       },

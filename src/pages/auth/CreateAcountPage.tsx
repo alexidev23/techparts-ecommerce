@@ -64,7 +64,7 @@ export default function CreateAccountPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-50 py-16">
+    <main className="min-h-screen bg-gray-50 py-16 dark:bg-gray-900">
       <section
         className="container mx-auto max-w-lg px-4"
         aria-labelledby="register-title"
@@ -72,17 +72,17 @@ export default function CreateAccountPage() {
         <header className="mb-6 text-center">
           <h1
             id="register-title"
-            className="text-3xl font-semibold text-gray-900"
+            className="text-3xl font-semibold text-gray-900 dark:text-gray-50"
           >
             Crear cuenta
           </h1>
 
-          <p className="mt-2 text-gray-600">
+          <p className="mt-2 text-gray-600 dark:text-gray-400">
             Regístrate para comenzar a comprar
           </p>
         </header>
 
-        <div className="rounded-lg border bg-white p-8 shadow-sm">
+        <div className="rounded-lg border bg-white p-8 shadow-sm dark:bg-gray-950">
           <form
             onSubmit={form.handleSubmit(onSubmit)}
             className="space-y-6"

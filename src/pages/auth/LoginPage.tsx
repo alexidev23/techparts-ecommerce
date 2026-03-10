@@ -57,22 +57,25 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-50 py-16">
+    <main className="min-h-screen bg-gray-50 py-16 dark:bg-gray-900">
       <section
         className="container mx-auto max-w-lg px-4"
         aria-labelledby="login-title"
       >
         <header className="mb-6 text-center">
-          <h1 id="login-title" className="text-3xl font-semibold text-gray-900">
+          <h1
+            id="login-title"
+            className="text-3xl font-semibold text-gray-900 dark:text-gray-50"
+          >
             Iniciar sesión
           </h1>
 
-          <p className="mt-2 text-gray-600">
+          <p className="mt-2 text-gray-600 dark:text-gray-400">
             Ingresa a tu cuenta para continuar
           </p>
         </header>
 
-        <div className="rounded-lg border bg-white p-8 shadow-sm">
+        <div className="rounded-lg border bg-white p-8 shadow-sm dark:bg-gray-950">
           <form
             onSubmit={form.handleSubmit(onSubmit)}
             className="space-y-6"
@@ -177,16 +180,16 @@ export default function LoginPage() {
 
           <Separator className="my-6" />
 
-          <div className="rounded-md bg-blue-50 p-4">
-            <h2 className="mb-2 text-sm font-semibold text-blue-900">
+          <div className="rounded-md bg-blue-50 p-4 dark:bg-blue-950">
+            <h2 className="mb-2 text-sm font-semibold text-blue-900 dark:text-blue-300">
               Demo - Credenciales de prueba
             </h2>
 
-            <p className="text-xs text-blue-800">
+            <p className="text-xs text-blue-800 dark:text-blue-500">
               <strong>Admin:</strong> admin@techparts.com / admin123
             </p>
 
-            <p className="text-xs text-blue-800">
+            <p className="text-xs text-blue-800 dark:text-blue-500">
               <strong>Usuario:</strong> usuario@test.com / user123
             </p>
           </div>
