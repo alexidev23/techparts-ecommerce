@@ -1,111 +1,261 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { CreditCard, Truck, CheckCircle2, ChevronLeft } from "lucide-react";
+import { Helmet } from "react-helmet-async";
+import {
+  CreditCard,
+  Truck,
+  CheckCircle2,
+  ChevronLeft,
+  Loader2,
+} from "lucide-react";
+import { Controller, useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
+import { formatPrice } from "@/utils/formatters";
+import {
+  createMPPreference,
+  getMPCheckoutUrl,
+  type MPPreferenceData,
+} from "@/services/mercadopago";
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const PAYMENT_LABELS: Record<string, string> = {
+  "credit-card": "Tarjeta de crédito/débito",
+  transfer: "Transferencia bancaria",
+  mercadopago: "Mercado Pago",
+};
+
+const STEPS = [
+  { num: 1, label: "Envío" },
+  { num: 2, label: "Pago" },
+  { num: 3, label: "Confirmación" },
+];
+
+// ─── Schema ───────────────────────────────────────────────────────────────────
+
+const shippingSchema = z.object({
+  email: z
+    .string()
+    .min(1, "El email es requerido")
+    .email("Ingresá un email válido"),
+  firstName: z
+    .string()
+    .min(2, "El nombre debe tener al menos 2 caracteres")
+    .max(50, "El nombre es demasiado largo"),
+  lastName: z
+    .string()
+    .min(2, "El apellido debe tener al menos 2 caracteres")
+    .max(50, "El apellido es demasiado largo"),
+  phone: z
+    .string()
+    .min(8, "El teléfono debe tener al menos 8 caracteres")
+    .regex(/^[0-9+\s\-()]+$/, "Ingresá un teléfono válido"),
+  address: z.string().min(5, "Ingresá una dirección válida"),
+  city: z.string().min(2, "Ingresá una ciudad válida"),
+  postalCode: z
+    .string()
+    .min(4, "El código postal debe tener al menos 4 caracteres")
+    .max(8, "El código postal es demasiado largo"),
+  shippingMethod: z.enum(["standard", "express"]),
+});
+
+type ShippingFormValues = z.infer<typeof shippingSchema>;
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+interface OrderItemProps {
+  image: string;
+  name: string;
+  quantity: number;
+  price: number;
+}
+
+function OrderItem({ image, name, quantity, price }: OrderItemProps) {
+  return (
+    <div className="flex gap-3 rounded-lg border p-3">
+      <div className="h-16 w-16 shrink-0 overflow-hidden rounded border">
+        <img
+          src={image}
+          alt={name}
+          className="h-full w-full object-cover"
+          width={64}
+          height={64}
+          loading="lazy"
+        />
+      </div>
+      <div className="flex flex-1 justify-between">
+        <div>
+          <p className="text-sm font-medium">{name}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Cantidad: {quantity}
+          </p>
+        </div>
+        <p className="text-sm font-medium">{formatPrice(price * quantity)}</p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function CheckoutPage() {
   const { items, totalPrice, clearCart } = useCart();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({
-    email: "",
-    firstName: "",
-    lastName: "",
-    phone: "",
-    address: "",
-    city: "",
-    postalCode: "",
-    shippingMethod: "standard",
-    paymentMethod: "credit-card",
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("credit-card");
+  const [shippingData, setShippingData] = useState<ShippingFormValues | null>(
+    null,
+  );
+
+  const form = useForm<ShippingFormValues>({
+    resolver: zodResolver(shippingSchema),
+    defaultValues: {
+      email: "",
+      firstName: "",
+      lastName: "",
+      phone: "",
+      address: "",
+      city: "",
+      postalCode: "",
+      shippingMethod: "standard",
+    },
   });
 
-  const formatPrice = (price: number) => {
-    return `$${price.toLocaleString("es-AR")}`;
-  };
+  const selectedShippingMethod = useWatch({
+    control: form.control,
+    name: "shippingMethod",
+    defaultValue: "standard",
+  });
 
-  const getShippingCost = () => {
+  const shipping = useMemo(() => {
     if (totalPrice >= 50000) return 0;
-    return formData.shippingMethod === "express" ? 1500 : 500;
+    return selectedShippingMethod === "express" ? 1500 : 500;
+  }, [totalPrice, selectedShippingMethod]);
+
+  const total = useMemo(() => totalPrice + shipping, [totalPrice, shipping]);
+
+  const onShippingSubmit = (values: ShippingFormValues) => {
+    setShippingData(values);
+    setStep(2);
   };
 
-  const shipping = getShippingCost();
-  const total = totalPrice + shipping;
+  const handleMercadoPago = async () => {
+    if (!shippingData) return;
+    setIsProcessing(true);
+    try {
+      const preferenceData: MPPreferenceData = {
+        items: items.map((item) => ({
+          id: item.product.id,
+          title: item.product.name,
+          quantity: item.quantity,
+          unit_price: item.product.price,
+          currency_id: "ARS",
+        })),
+        payer: {
+          email: shippingData.email,
+          name: shippingData.firstName,
+          surname: shippingData.lastName,
+          phone: shippingData.phone,
+        },
+        back_urls: {
+          success: `${window.location.origin}/pago/exitoso`,
+          failure: `${window.location.origin}/pago/error`,
+          pending: `${window.location.origin}/pago/pendiente`,
+        },
+        auto_return: "approved",
+      };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (step === 1) {
-      setStep(2);
-    } else if (step === 2) {
-      setStep(3);
-    } else {
-      // Process order
-      toast.success("¡Compra realizada con éxito!");
-      clearCart();
-      setTimeout(() => {
-        navigate("/");
-      }, 2000);
+      const preference = await createMPPreference(preferenceData);
+      const checkoutUrl = getMPCheckoutUrl(preference);
+      window.location.href = checkoutUrl;
+    } catch (error) {
+      toast.error("Error al procesar el pago. Intentá nuevamente.");
+      console.error("[MP Error]", error);
+      setIsProcessing(false);
     }
+  };
+
+  const handleConfirm = async () => {
+    if (paymentMethod === "mercadopago") {
+      await handleMercadoPago();
+      return;
+    }
+    toast.success("¡Compra realizada con éxito!");
+    clearCart();
+    setTimeout(() => navigate("/"), 2000);
   };
 
   if (items.length === 0 && step < 4) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+      <main className="min-h-screen bg-slate-50 dark:bg-slate-950">
+        <Helmet>
+          <title>Checkout | Tu Tienda</title>
+          <meta name="robots" content="noindex, nofollow" />
+        </Helmet>
         <div className="container mx-auto px-4 py-16">
           <div className="mx-auto max-w-md text-center">
-            <h1>Tu carrito está vacío</h1>
+            <h1 className="text-2xl font-bold">Tu carrito está vacío</h1>
             <p className="mt-2 text-slate-600 dark:text-slate-400">
               Agrega productos para poder realizar una compra
             </p>
-            <Link to="/products">
-              <Button className="mt-6" size="lg">
-                Explorar productos
-              </Button>
-            </Link>
+            <Button asChild className="mt-6" size="lg">
+              <Link to="/productos">Explorar productos</Link>
+            </Button>
           </div>
         </div>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+    <main className="min-h-screen bg-slate-50 dark:bg-slate-950">
+      <Helmet>
+        <title>Checkout | Tu Tienda</title>
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
+
       <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <Link to="/cart">
-            <Button variant="ghost" size="sm">
-              <ChevronLeft className="mr-1 h-4 w-4" />
+        {/* Breadcrumb */}
+        <nav aria-label="Breadcrumb" className="mb-8">
+          <Button asChild variant="ghost" size="sm">
+            <Link to="/carrito">
+              <ChevronLeft className="mr-1 h-4 w-4" aria-hidden="true" />
               Volver al carrito
-            </Button>
-          </Link>
-          <h1 className="mt-4">Finalizar compra</h1>
-        </div>
+            </Link>
+          </Button>
+          <h1 className="mt-4 text-3xl font-bold">Finalizar compra</h1>
+        </nav>
 
         {/* Progress Steps */}
-        <div className="mb-8 flex items-center justify-center gap-4">
-          {[
-            { num: 1, label: "Envío" },
-            { num: 2, label: "Pago" },
-            { num: 3, label: "Confirmación" },
-          ].map((s, idx) => (
-            <div key={s.num} className="flex items-center">
+        <ol
+          aria-label="Pasos del checkout"
+          className="mb-8 flex items-center justify-center gap-4 list-none p-0"
+        >
+          {STEPS.map((s, idx) => (
+            <li key={s.num} className="flex items-center">
               <div
-                className={`flex h-8 w-8 items-center justify-center rounded-full text-sm ${
+                className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
                   step >= s.num
                     ? "bg-blue-600 text-white"
                     : "bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
                 }`}
+                aria-current={step === s.num ? "step" : undefined}
               >
                 {s.num}
               </div>
@@ -117,332 +267,398 @@ export default function CheckoutPage() {
                       ? "bg-blue-600"
                       : "bg-slate-200 dark:bg-slate-800"
                   }`}
+                  aria-hidden="true"
                 />
               )}
-            </div>
+            </li>
           ))}
-        </div>
+        </ol>
 
         <div className="grid gap-8 lg:grid-cols-3">
-          {/* Form */}
-          <div className="lg:col-span-2">
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Step 1: Shipping */}
-              {step === 1 && (
-                <div className="rounded-lg border bg-white p-6 dark:bg-slate-900">
-                  <div className="mb-6 flex items-center gap-3">
-                    <Truck className="h-6 w-6 text-blue-600" />
-                    <h2>Información de envío</h2>
-                  </div>
+          <div className="lg:col-span-2 space-y-6">
+            {/* Step 1: Shipping */}
+            {step === 1 && (
+              <div className="rounded-lg border bg-white p-6 dark:bg-slate-900">
+                <div className="mb-6 flex items-center gap-3">
+                  <Truck className="h-6 w-6 text-blue-600" aria-hidden="true" />
+                  <h2 className="text-xl font-semibold">
+                    Información de envío
+                  </h2>
+                </div>
 
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        name="email"
-                        type="email"
-                        required
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        placeholder="tu@email.com"
-                      />
-                    </div>
+                <form onSubmit={form.handleSubmit(onShippingSubmit)}>
+                  <FieldGroup>
+                    {/* Email */}
+                    <Controller
+                      name="email"
+                      control={form.control}
+                      render={({ field, fieldState }) => (
+                        <Field data-invalid={fieldState.invalid}>
+                          <FieldLabel htmlFor="email">Email</FieldLabel>
+                          <Input
+                            {...field}
+                            id="email"
+                            type="email"
+                            placeholder="tu@email.com"
+                            aria-invalid={fieldState.invalid}
+                          />
+                          {fieldState.invalid && (
+                            <FieldError errors={[fieldState.error]} />
+                          )}
+                        </Field>
+                      )}
+                    />
 
+                    {/* Nombre y Apellido */}
                     <div className="grid gap-4 md:grid-cols-2">
-                      <div>
-                        <Label htmlFor="firstName">Nombre</Label>
-                        <Input
-                          id="firstName"
-                          name="firstName"
-                          required
-                          value={formData.firstName}
-                          onChange={handleInputChange}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="lastName">Apellido</Label>
-                        <Input
-                          id="lastName"
-                          name="lastName"
-                          required
-                          value={formData.lastName}
-                          onChange={handleInputChange}
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="phone">Teléfono</Label>
-                      <Input
-                        id="phone"
-                        name="phone"
-                        type="tel"
-                        required
-                        value={formData.phone}
-                        onChange={handleInputChange}
-                        placeholder="+54 11 1234-5678"
+                      <Controller
+                        name="firstName"
+                        control={form.control}
+                        render={({ field, fieldState }) => (
+                          <Field data-invalid={fieldState.invalid}>
+                            <FieldLabel htmlFor="firstName">Nombre</FieldLabel>
+                            <Input
+                              {...field}
+                              id="firstName"
+                              aria-invalid={fieldState.invalid}
+                            />
+                            {fieldState.invalid && (
+                              <FieldError errors={[fieldState.error]} />
+                            )}
+                          </Field>
+                        )}
+                      />
+                      <Controller
+                        name="lastName"
+                        control={form.control}
+                        render={({ field, fieldState }) => (
+                          <Field data-invalid={fieldState.invalid}>
+                            <FieldLabel htmlFor="lastName">Apellido</FieldLabel>
+                            <Input
+                              {...field}
+                              id="lastName"
+                              aria-invalid={fieldState.invalid}
+                            />
+                            {fieldState.invalid && (
+                              <FieldError errors={[fieldState.error]} />
+                            )}
+                          </Field>
+                        )}
                       />
                     </div>
 
-                    <div>
-                      <Label htmlFor="address">Dirección</Label>
-                      <Input
-                        id="address"
-                        name="address"
-                        required
-                        value={formData.address}
-                        onChange={handleInputChange}
-                        placeholder="Calle 123"
-                      />
-                    </div>
+                    {/* Teléfono */}
+                    <Controller
+                      name="phone"
+                      control={form.control}
+                      render={({ field, fieldState }) => (
+                        <Field data-invalid={fieldState.invalid}>
+                          <FieldLabel htmlFor="phone">Teléfono</FieldLabel>
+                          <Input
+                            {...field}
+                            id="phone"
+                            type="tel"
+                            placeholder="+54 11 1234-5678"
+                            aria-invalid={fieldState.invalid}
+                          />
+                          {fieldState.invalid && (
+                            <FieldError errors={[fieldState.error]} />
+                          )}
+                        </Field>
+                      )}
+                    />
 
+                    {/* Dirección */}
+                    <Controller
+                      name="address"
+                      control={form.control}
+                      render={({ field, fieldState }) => (
+                        <Field data-invalid={fieldState.invalid}>
+                          <FieldLabel htmlFor="address">Dirección</FieldLabel>
+                          <Input
+                            {...field}
+                            id="address"
+                            placeholder="Calle 123"
+                            aria-invalid={fieldState.invalid}
+                          />
+                          {fieldState.invalid && (
+                            <FieldError errors={[fieldState.error]} />
+                          )}
+                        </Field>
+                      )}
+                    />
+
+                    {/* Ciudad y Código Postal */}
                     <div className="grid gap-4 md:grid-cols-2">
-                      <div>
-                        <Label htmlFor="city">Ciudad</Label>
-                        <Input
-                          id="city"
-                          name="city"
-                          required
-                          value={formData.city}
-                          onChange={handleInputChange}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="postalCode">Código Postal</Label>
-                        <Input
-                          id="postalCode"
-                          name="postalCode"
-                          required
-                          value={formData.postalCode}
-                          onChange={handleInputChange}
-                        />
-                      </div>
+                      <Controller
+                        name="city"
+                        control={form.control}
+                        render={({ field, fieldState }) => (
+                          <Field data-invalid={fieldState.invalid}>
+                            <FieldLabel htmlFor="city">Ciudad</FieldLabel>
+                            <Input
+                              {...field}
+                              id="city"
+                              aria-invalid={fieldState.invalid}
+                            />
+                            {fieldState.invalid && (
+                              <FieldError errors={[fieldState.error]} />
+                            )}
+                          </Field>
+                        )}
+                      />
+                      <Controller
+                        name="postalCode"
+                        control={form.control}
+                        render={({ field, fieldState }) => (
+                          <Field data-invalid={fieldState.invalid}>
+                            <FieldLabel htmlFor="postalCode">
+                              Código Postal
+                            </FieldLabel>
+                            <Input
+                              {...field}
+                              id="postalCode"
+                              aria-invalid={fieldState.invalid}
+                            />
+                            {fieldState.invalid && (
+                              <FieldError errors={[fieldState.error]} />
+                            )}
+                          </Field>
+                        )}
+                      />
                     </div>
 
-                    <div>
-                      <Label>Método de envío</Label>
-                      <RadioGroup
-                        value={formData.shippingMethod}
-                        onValueChange={(value) =>
-                          setFormData({ ...formData, shippingMethod: value })
-                        }
-                        className="mt-3 space-y-3"
-                      >
-                        <div className="flex items-center justify-between rounded-lg border p-4">
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="standard" id="standard" />
-                            <Label
-                              htmlFor="standard"
-                              className="cursor-pointer"
-                            >
-                              <div>
-                                <p>Envío estándar</p>
-                                <p className="text-sm text-slate-500 dark:text-slate-400">
-                                  3-5 días hábiles
-                                </p>
+                    {/* Método de envío */}
+                    <Controller
+                      name="shippingMethod"
+                      control={form.control}
+                      render={({ field, fieldState }) => (
+                        <Field data-invalid={fieldState.invalid}>
+                          <FieldLabel>Método de envío</FieldLabel>
+                          <RadioGroup
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            className="mt-3 space-y-3"
+                            aria-invalid={fieldState.invalid}
+                          >
+                            <div className="flex items-center justify-between rounded-lg border p-4">
+                              <div className="flex items-center space-x-2">
+                                <RadioGroupItem
+                                  value="standard"
+                                  id="standard"
+                                />
+                                <Label
+                                  htmlFor="standard"
+                                  className="cursor-pointer"
+                                >
+                                  <p className="font-medium">Envío estándar</p>
+                                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                                    3-5 días hábiles
+                                  </p>
+                                </Label>
                               </div>
-                            </Label>
-                          </div>
-                          <span>{totalPrice >= 50000 ? "Gratis" : "$500"}</span>
-                        </div>
-                        <div className="flex items-center justify-between rounded-lg border p-4">
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="express" id="express" />
-                            <Label htmlFor="express" className="cursor-pointer">
-                              <div>
-                                <p>Envío express</p>
-                                <p className="text-sm text-slate-500 dark:text-slate-400">
-                                  24-48 horas
-                                </p>
+                              <span className="font-medium">
+                                {totalPrice >= 50000 ? "Gratis" : "$500"}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between rounded-lg border p-4">
+                              <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="express" id="express" />
+                                <Label
+                                  htmlFor="express"
+                                  className="cursor-pointer"
+                                >
+                                  <p className="font-medium">Envío express</p>
+                                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                                    24-48 horas
+                                  </p>
+                                </Label>
                               </div>
-                            </Label>
-                          </div>
-                          <span>$1.500</span>
-                        </div>
-                      </RadioGroup>
-                    </div>
-                  </div>
+                              <span className="font-medium">$1.500</span>
+                            </div>
+                          </RadioGroup>
+                          {fieldState.invalid && (
+                            <FieldError errors={[fieldState.error]} />
+                          )}
+                        </Field>
+                      )}
+                    />
+                  </FieldGroup>
 
                   <Button type="submit" size="lg" className="mt-6 w-full">
                     Continuar al pago
                   </Button>
+                </form>
+              </div>
+            )}
+
+            {/* Step 2: Payment */}
+            {step === 2 && (
+              <div className="rounded-lg border bg-white p-6 dark:bg-slate-900">
+                <div className="mb-6 flex items-center gap-3">
+                  <CreditCard
+                    className="h-6 w-6 text-blue-600"
+                    aria-hidden="true"
+                  />
+                  <h2 className="text-xl font-semibold">Método de pago</h2>
                 </div>
-              )}
 
-              {/* Step 2: Payment */}
-              {step === 2 && (
-                <div className="rounded-lg border bg-white p-6 dark:bg-slate-900">
-                  <div className="mb-6 flex items-center gap-3">
-                    <CreditCard className="h-6 w-6 text-blue-600" />
-                    <h2>Método de pago</h2>
-                  </div>
+                <RadioGroup
+                  value={paymentMethod}
+                  onValueChange={setPaymentMethod}
+                  className="space-y-3"
+                >
+                  {Object.entries(PAYMENT_LABELS).map(([value, label]) => (
+                    <div key={value} className="rounded-lg border p-4">
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value={value} id={value} />
+                        <Label
+                          htmlFor={value}
+                          className="cursor-pointer font-medium"
+                        >
+                          {label}
+                        </Label>
+                      </div>
+                    </div>
+                  ))}
+                </RadioGroup>
 
-                  <RadioGroup
-                    value={formData.paymentMethod}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, paymentMethod: value })
-                    }
-                    className="space-y-3"
+                <div className="mt-6 flex gap-3">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="flex-1"
+                    onClick={() => setStep(1)}
                   >
-                    <div className="rounded-lg border p-4">
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="credit-card" id="credit-card" />
-                        <Label htmlFor="credit-card" className="cursor-pointer">
-                          Tarjeta de crédito/débito
-                        </Label>
-                      </div>
-                    </div>
-                    <div className="rounded-lg border p-4">
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="transfer" id="transfer" />
-                        <Label htmlFor="transfer" className="cursor-pointer">
-                          Transferencia bancaria
-                        </Label>
-                      </div>
-                    </div>
-                    <div className="rounded-lg border p-4">
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="mercadopago" id="mercadopago" />
-                        <Label htmlFor="mercadopago" className="cursor-pointer">
-                          Mercado Pago
-                        </Label>
-                      </div>
-                    </div>
-                  </RadioGroup>
+                    Volver
+                  </Button>
+                  <Button
+                    size="lg"
+                    className="flex-1"
+                    onClick={() => setStep(3)}
+                  >
+                    Continuar
+                  </Button>
+                </div>
+              </div>
+            )}
 
-                  <div className="mt-6 flex gap-3">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="lg"
-                      className="flex-1"
-                      onClick={() => setStep(1)}
-                    >
-                      Volver
-                    </Button>
-                    <Button type="submit" size="lg" className="flex-1">
-                      Continuar
-                    </Button>
+            {/* Step 3: Confirmation */}
+            {step === 3 && shippingData && (
+              <div className="rounded-lg border bg-white p-6 dark:bg-slate-900">
+                <div className="mb-6 flex items-center gap-3">
+                  <CheckCircle2
+                    className="h-6 w-6 text-blue-600"
+                    aria-hidden="true"
+                  />
+                  <h2 className="text-xl font-semibold">Confirmar pedido</h2>
+                </div>
+
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+                      Datos de envío
+                    </h3>
+                    <div className="rounded-lg border p-4 text-sm space-y-1">
+                      <p className="font-medium">
+                        {shippingData.firstName} {shippingData.lastName}
+                      </p>
+                      <p className="text-slate-600 dark:text-slate-400">
+                        {shippingData.email}
+                      </p>
+                      <p className="text-slate-600 dark:text-slate-400">
+                        {shippingData.phone}
+                      </p>
+                      <p className="text-slate-600 dark:text-slate-400">
+                        {shippingData.address}, {shippingData.city} (
+                        {shippingData.postalCode})
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+                      Método de pago
+                    </h3>
+                    <div className="rounded-lg border p-4 text-sm">
+                      <p className="font-medium">
+                        {PAYMENT_LABELS[paymentMethod]}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+                      Productos
+                    </h3>
+                    <ul className="space-y-3 list-none p-0">
+                      {items.map((item) => (
+                        <li key={item.product.id}>
+                          <OrderItem
+                            image={item.product.image}
+                            name={item.product.name}
+                            quantity={item.quantity}
+                            price={item.product.price}
+                          />
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 </div>
-              )}
 
-              {/* Step 3: Confirmation */}
-              {step === 3 && (
-                <div className="rounded-lg border bg-white p-6 dark:bg-slate-900">
-                  <div className="mb-6 flex items-center gap-3">
-                    <CheckCircle2 className="h-6 w-6 text-blue-600" />
-                    <h2>Confirmar pedido</h2>
-                  </div>
-
-                  <div className="space-y-6">
-                    {/* Shipping Info */}
-                    <div>
-                      <h3 className="mb-3 text-sm">Datos de envío</h3>
-                      <div className="rounded-lg border p-4 text-sm">
-                        <p>
-                          {formData.firstName} {formData.lastName}
-                        </p>
-                        <p className="text-slate-600 dark:text-slate-400">
-                          {formData.email}
-                        </p>
-                        <p className="text-slate-600 dark:text-slate-400">
-                          {formData.phone}
-                        </p>
-                        <p className="mt-2 text-slate-600 dark:text-slate-400">
-                          {formData.address}, {formData.city} (
-                          {formData.postalCode})
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Payment Method */}
-                    <div>
-                      <h3 className="mb-3 text-sm">Método de pago</h3>
-                      <div className="rounded-lg border p-4 text-sm">
-                        <p>
-                          {formData.paymentMethod === "credit-card" &&
-                            "Tarjeta de crédito/débito"}
-                          {formData.paymentMethod === "transfer" &&
-                            "Transferencia bancaria"}
-                          {formData.paymentMethod === "mercadopago" &&
-                            "Mercado Pago"}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Products */}
-                    <div>
-                      <h3 className="mb-3 text-sm">Productos</h3>
-                      <div className="space-y-3">
-                        {items.map((item) => (
-                          <div
-                            key={item.product.id}
-                            className="flex gap-3 rounded-lg border p-3"
-                          >
-                            <div className="h-16 w-16 shrink-0 overflow-hidden rounded border">
-                              <img
-                                src={item.product.image}
-                                alt={item.product.name}
-                                className="h-full w-full object-cover"
-                              />
-                            </div>
-                            <div className="flex flex-1 justify-between">
-                              <div>
-                                <p className="text-sm">{item.product.name}</p>
-                                <p className="text-xs text-slate-500 dark:text-slate-400">
-                                  Cantidad: {item.quantity}
-                                </p>
-                              </div>
-                              <p className="text-sm">
-                                {formatPrice(
-                                  item.product.price * item.quantity,
-                                )}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-6 flex gap-3">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="lg"
-                      className="flex-1"
-                      onClick={() => setStep(2)}
-                    >
-                      Volver
-                    </Button>
-                    <Button type="submit" size="lg" className="flex-1">
-                      Confirmar compra
-                    </Button>
-                  </div>
+                <div className="mt-6 flex gap-3">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="flex-1"
+                    onClick={() => setStep(2)}
+                    disabled={isProcessing}
+                  >
+                    Volver
+                  </Button>
+                  <Button
+                    size="lg"
+                    className="flex-1"
+                    disabled={isProcessing}
+                    onClick={handleConfirm}
+                  >
+                    {isProcessing ? (
+                      <>
+                        <Loader2
+                          className="mr-2 h-4 w-4 animate-spin"
+                          aria-hidden="true"
+                        />
+                        Procesando...
+                      </>
+                    ) : (
+                      "Confirmar compra"
+                    )}
+                  </Button>
                 </div>
-              )}
-            </form>
+              </div>
+            )}
           </div>
 
           {/* Order Summary */}
-          <div className="lg:col-span-1">
+          <aside className="lg:col-span-1">
             <div className="sticky top-24 rounded-lg border bg-white p-6 dark:bg-slate-900">
-              <h2 className="mb-6">Resumen</h2>
+              <h2 className="mb-6 text-lg font-semibold">Resumen</h2>
 
-              <div className="mb-6 space-y-3">
+              <ul className="mb-6 space-y-3 list-none p-0">
                 {items.map((item) => (
-                  <div key={item.product.id} className="flex gap-3">
+                  <li key={item.product.id} className="flex gap-3">
                     <div className="h-16 w-16 shrink-0 overflow-hidden rounded border">
                       <img
                         src={item.product.image}
                         alt={item.product.name}
                         className="h-full w-full object-cover"
+                        width={64}
+                        height={64}
+                        loading="lazy"
                       />
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm">{item.product.name}</p>
+                      <p className="text-sm font-medium">{item.product.name}</p>
                       <p className="text-xs text-slate-500 dark:text-slate-400">
                         Cantidad: {item.quantity}
                       </p>
@@ -450,9 +666,9 @@ export default function CheckoutPage() {
                         {formatPrice(item.product.price * item.quantity)}
                       </p>
                     </div>
-                  </div>
+                  </li>
                 ))}
-              </div>
+              </ul>
 
               <Separator className="my-4" />
 
@@ -479,16 +695,16 @@ export default function CheckoutPage() {
 
               <Separator className="my-4" />
 
-              <div className="flex justify-between">
+              <div className="flex justify-between font-medium">
                 <span>Total</span>
                 <span className="text-blue-600 dark:text-blue-400">
                   {formatPrice(total)}
                 </span>
               </div>
             </div>
-          </div>
+          </aside>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
