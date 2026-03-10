@@ -4,7 +4,7 @@ import type { User } from "@/types/user";
 
 type AuthContextType = {
   user: User | null;
-  loginUser: (email: string, password: string) => boolean;
+  loginUser: (email: string, password: string) => User | null; // antes era boolean
   logout: () => void;
 };
 
@@ -18,14 +18,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return authService.getCurrentUser();
   });
 
-  function loginUser(email: string, password: string) {
+  function loginUser(email: string, password: string): User | null {
     const loggedUser = authService.login(email, password);
-
-    if (!loggedUser) return false;
-
+    if (!loggedUser) return null;
     setUser(loggedUser);
-
-    return true;
+    return loggedUser;
   }
 
   function logout() {
