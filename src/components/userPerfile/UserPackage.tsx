@@ -1,8 +1,10 @@
 import { Card } from "@/components/ui/card";
-import { Button } from "../ui/button";
-import { Badge } from "../ui/badge";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { formatPrice } from "@/utils/formatters";
+import type { OrderStatus } from "@/types/orders";
 
-type OrderStatus = "entregado" | "enviado" | "procesando";
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface OrdersItem {
   id: string;
@@ -13,26 +15,28 @@ interface OrdersItem {
   status: OrderStatus;
 }
 
-// Afuera del componente — es estático, no necesita recrearse en cada render
-const statusStyles: Record<OrderStatus, string> = {
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const STATUS_STYLES: Record<OrderStatus, string> = {
   procesando: "text-yellow-600 bg-yellow-100",
   enviado: "text-blue-600 bg-blue-100",
   entregado: "text-green-600 bg-green-100",
+  cancelado: "text-red-600 bg-red-100",
 };
 
-// Labels con la primera letra en mayúscula para mostrar en el Badge
-const statusLabels: Record<OrderStatus, string> = {
+const STATUS_LABELS: Record<OrderStatus, string> = {
   procesando: "Procesando",
   enviado: "Enviado",
   entregado: "Entregado",
+  cancelado: "Cancelado",
 };
 
-// Nombre del array corregido a orders
+// TODO: reemplazar con datos reales del backend
 const orders: OrdersItem[] = [
   {
-    id: "1", // ids únicos
+    id: "1",
     num_pedido: "0001",
-    date: "2020-02-13", // formato ISO consistente con el resto del proyecto
+    date: "2020-02-13",
     cantidad: 3,
     price: 23321,
     status: "entregado",
@@ -55,20 +59,32 @@ const orders: OrdersItem[] = [
   },
 ];
 
+// ─── Utils ────────────────────────────────────────────────────────────────────
+
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString("es-AR", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
 export default function UserPackage() {
   return (
     <section
-      aria-labelledby="orders-title" // id único para este componente
-      className="w-full h-full bg-gray-50 dark:bg-gray-950 rounded-lg p-6 my-10 border border-gray-200 dark:border-gray-700"
+      aria-labelledby="orders-title"
+      className="my-10 w-full rounded-lg border border-gray-200 bg-gray-50 p-6 dark:border-gray-700 dark:bg-gray-950"
     >
-      <div className="flex items-center justify-between mb-6">
+      <header className="mb-6 flex items-center justify-between">
         <h2
           id="orders-title"
           className="text-xl font-semibold text-gray-900 dark:text-gray-50"
         >
           Mis Pedidos
         </h2>
-      </div>
+      </header>
 
       <ul className="space-y-4">
         {orders.map((item) => (
@@ -80,19 +96,16 @@ export default function UserPackage() {
                     <h3 className="text-lg font-medium text-gray-900 dark:text-gray-50">
                       #{item.num_pedido}
                     </h3>
-                    <Badge className={statusStyles[item.status]}>
-                      {/* Label con mayúscula en lugar del valor crudo del tipo */}
-                      {statusLabels[item.status]}
+                    <Badge
+                      className={STATUS_STYLES[item.status]}
+                      aria-label={`Estado del pedido: ${STATUS_LABELS[item.status]}`}
+                    >
+                      {STATUS_LABELS[item.status]}
                     </Badge>
                   </div>
 
-                  {/* Formateamos la fecha desde ISO a formato legible */}
                   <p className="text-sm text-gray-600">
-                    {new Date(item.date).toLocaleDateString("es-AR", {
-                      day: "numeric",
-                      month: "long",
-                      year: "numeric",
-                    })}
+                    {formatDate(item.date)}
                   </p>
 
                   <span className="text-sm text-gray-600">
@@ -101,11 +114,11 @@ export default function UserPackage() {
                   </span>
                 </div>
 
-                <div className="flex flex-col gap-2 shrink-0 items-end">
-                  {/* p es más semántico que div para un precio */}
+                <div className="flex shrink-0 flex-col items-end gap-2">
                   <p className="text-lg font-bold text-green-500">
-                    ${item.price.toLocaleString("es-AR")}
+                    {formatPrice(item.price)}
                   </p>
+                  {/* TODO: reemplazar con Link cuando tengas la ruta de detalle de pedido */}
                   <Button className="bg-blue-600 hover:bg-blue-700 text-white">
                     Ver detalle
                   </Button>
