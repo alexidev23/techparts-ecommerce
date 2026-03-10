@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Filter } from "lucide-react";
+import { Helmet } from "react-helmet-async";
 
 import type { Product, FilterOptions } from "@/types";
 import { FilterSidebar } from "@/components/FilterSidebar";
@@ -17,7 +18,6 @@ import { ProductCard } from "@/components/ProductCard";
 
 export default function ProductsPage() {
   const [searchParams] = useSearchParams();
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>(products);
 
   const [filters, setFilters] = useState<FilterOptions>({
     brands: [],
@@ -26,7 +26,9 @@ export default function ProductsPage() {
     sortBy: "popular",
   });
 
-  const applyFilters = () => {
+  const searchQuery = searchParams.get("search");
+
+  const filteredProducts = useMemo<Product[]>(() => {
     let filtered = [...products];
 
     // Category from URL
@@ -36,10 +38,9 @@ export default function ProductsPage() {
     }
 
     // Search from URL
-    const searchQuery = searchParams.get("search")?.toLowerCase();
     if (searchQuery) {
       filtered = filtered.filter((p) =>
-        p.name.toLowerCase().includes(searchQuery),
+        p.name.toLowerCase().includes(searchQuery.toLowerCase()),
       );
     }
 
@@ -61,7 +62,7 @@ export default function ProductsPage() {
         p.price >= filters.priceRange[0] && p.price <= filters.priceRange[1],
     );
 
-    // Sort options
+    // Sort
     switch (filters.sortBy) {
       case "price-asc":
         filtered.sort((a, b) => a.price - b.price);
@@ -78,32 +79,29 @@ export default function ProductsPage() {
         break;
     }
 
-    setFilteredProducts(filtered);
-  };
-
-  useEffect(() => {
-    applyFilters();
-  }, [filters, searchParams]);
+    return filtered;
+  }, [filters, searchParams, searchQuery]);
 
   const handleFilterChange = (newFilters: Partial<FilterOptions>) => {
-    setFilters((prev) => ({
-      ...prev,
-      ...newFilters,
-    }));
+    setFilters((prev) => ({ ...prev, ...newFilters }));
   };
-
-  // Read search param
-  const searchQuery = searchParams.get("search");
 
   return (
     <main className="min-h-screen bg-slate-50 dark:bg-slate-950">
-      {/* <Helmet>
-        <title>Productos | TechParts</title>
+      <Helmet>
+        <title>Productos | Tu Tienda</title>
         <meta
           name="description"
-          content="Explora nuestra selección de repuestos y accesorios tecnológicos al mejor precio."
+          content="Explorá nuestra selección de repuestos y accesorios para smartphones. Filtrá por marca, categoría y precio."
         />
-      </Helmet> */}
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="Productos | Tu Tienda" />
+        <meta
+          property="og:description"
+          content="Explorá nuestra selección de repuestos y accesorios para smartphones."
+        />
+        <link rel="canonical" href="https://tutienda.com/productos" />
+      </Helmet>
 
       <div className="container mx-auto px-4 py-8">
         {/* Page Header */}
@@ -132,23 +130,25 @@ export default function ProductsPage() {
 
           {/* Products Section */}
           <section className="flex-1" aria-labelledby="products-heading">
-            {/* Mobile Filter Button */}
-            <div className="mb-6 flex items-center justify-between lg:hidden">
+            {/* Top bar — count + mobile filter */}
+            <div className="mb-6 flex items-center justify-between">
               <p
                 className="text-slate-600 dark:text-slate-400"
                 aria-live="polite"
               >
-                {filteredProducts.length} productos
+                {filteredProducts.length === 1
+                  ? "1 producto"
+                  : `${filteredProducts.length} productos`}
               </p>
 
+              {/* Mobile filter button */}
               <Sheet>
                 <SheetTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Filter className="mr-2 h-4 w-4" />
+                  <Button variant="outline" size="sm" className="lg:hidden">
+                    <Filter className="mr-2 h-4 w-4" aria-hidden="true" />
                     Filtros
                   </Button>
                 </SheetTrigger>
-
                 <SheetContent side="left" className="w-80 overflow-y-auto">
                   <SheetHeader>
                     <SheetTitle>Filtros</SheetTitle>
@@ -160,38 +160,32 @@ export default function ProductsPage() {
               </Sheet>
             </div>
 
-            {/* Desktop count */}
-            <div className="mb-6 hidden lg:block">
-              <p
-                className="text-slate-600 dark:text-slate-400"
-                aria-live="polite"
-              >
-                Mostrando {filteredProducts.length} productos
-              </p>
-            </div>
-
             {/* Product Grid */}
             {filteredProducts.length > 0 ? (
-              <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+              <ul className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 list-none p-0">
                 {filteredProducts.map((product) => (
-                  <ProductCard key={product.id} product={product} />
+                  <li key={product.id}>
+                    <ProductCard product={product} />
+                  </li>
                 ))}
-              </div>
+              </ul>
             ) : (
-              <div className="flex min-h-75 items-center justify-center rounded-lg border bg-white dark:bg-slate-900">
-                <div className="text-center">
+              <div
+                className="flex min-h-75 items-center justify-center rounded-lg border bg-white dark:bg-slate-900"
+                role="status"
+                aria-live="polite"
+              >
+                <p className="text-center text-slate-600 dark:text-slate-400">
                   {searchQuery ? (
-                    <p className="text-slate-600 dark:text-slate-400">
+                    <>
                       El producto "
                       <span className="font-medium">{searchQuery}</span>" no se
                       encuentra disponible por el momento.
-                    </p>
+                    </>
                   ) : (
-                    <p className="text-slate-600 dark:text-slate-400">
-                      No se encontraron productos con los filtros seleccionados.
-                    </p>
+                    "No se encontraron productos con los filtros seleccionados."
                   )}
-                </div>
+                </p>
               </div>
             )}
           </section>
