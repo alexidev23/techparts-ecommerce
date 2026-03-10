@@ -1,27 +1,44 @@
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { LowProductProps } from "@/types/orders";
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const LOW_STOCK_THRESHOLD = 10;
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function LowStockProducts({ title, items }: LowProductProps) {
   return (
-    <div className="space-y-2.5 bg-white p-4 rounded-lg border border-gray-200 overflow-y-scroll max-h-100 dark:bg-gray-950 dark:border-gray-700">
-      <h2 className="text-lg font-semibold mb-2">{title}</h2>
-      {items.map((item) => (
-        <Card
-          key={item.id}
-          className="flex flex-row px-4 py-2.5 items-center justify-between border-b"
-        >
-          <div>
-            <p className="text-lg font-bold">{item.name}</p>
-            <span
-              className={`text-sm ${item.stock < 10 ? "text-red-500 font-semibold" : "text-yellow-700"}`}
+    <Card className="max-h-100 overflow-y-auto dark:border-gray-700 dark:bg-gray-950">
+      <CardHeader>
+        <CardTitle className="text-lg">{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ul className="space-y-2.5 list-none p-0">
+          {items.map((item) => (
+            <li
+              key={item.id}
+              className="flex items-center justify-between rounded-lg border border-gray-200 px-4 py-2.5 dark:border-gray-700"
             >
-              stock: {item.stock}
-            </span>
-          </div>
-          <Button>Restablecer</Button>
-        </Card>
-      ))}
-    </div>
+              <div>
+                <p className="text-lg font-bold">{item.name}</p>
+                <span
+                  className={`text-sm ${
+                    item.stock < LOW_STOCK_THRESHOLD
+                      ? "font-semibold text-red-500"
+                      : "text-yellow-700"
+                  }`}
+                  aria-label={`Stock disponible: ${item.stock} unidades`}
+                >
+                  Stock: {item.stock} unidades
+                </span>
+              </div>
+              <Button size="sm">Restablecer</Button>
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
   );
 }
