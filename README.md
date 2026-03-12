@@ -135,13 +135,43 @@ npx cypress run
 
 ---
 
+## 🧪 Testing con Cypress
+
+Este proyecto incluye una suite de tests E2E automatizados con **Cypress** (en desarrollo activo).
+
+### Flujos testeados:
+
+| Archivo                 | Descripción                                         |
+| ----------------------- | --------------------------------------------------- |
+| `home.cy.js`            | Theme toggle (dark/light) y filtrado por categorías |
+| `producto-detail.cy.js` | Detalle de producto y agregar al carrito            |
+
+### Próximamente:
+
+- Login con rol user y rol admin
+- Flujo completo de checkout
+- Listado y búsqueda de productos
+
+### Correr los tests
+
+```bash
+# Instalar Cypress
+npm install cypress --save-dev
+
+# Abrir Cypress en modo interactivo
+npx cypress open
+
+# Ejecutar en modo headless
+npx cypress run
+```
+
 ## 📌 Estado del proyecto
 
 - [x] Frontend completo y deployado
 - [x] Sistema de roles (admin / user)
 - [x] Carrito con persistencia
 - [x] Flujo de checkout
-- [ ] Suite de tests E2E con Cypress _(en progreso)_
+- [x] Tests E2E con Cypress — Home y detalle de producto _(en progreso)_
 - [ ] Backend / API REST _(próximamente)_
 
 ---
