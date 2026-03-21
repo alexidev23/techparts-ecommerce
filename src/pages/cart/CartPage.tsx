@@ -71,7 +71,7 @@ export default function CartPage() {
                   >
                     <div className="h-24 w-24 overflow-hidden rounded-lg border">
                       <img
-                        src={item.product.image}
+                        src={item.product.imgPrincipal}
                         alt={item.product.name}
                         className="h-full w-full object-cover"
                         width={96}
@@ -90,7 +90,7 @@ export default function CartPage() {
                         </h2>
                       </Link>
                       <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                        {item.product.category} • {item.product.brand}
+                        {item.product.category.name} • {item.product.brand}
                       </p>
                     </div>
 

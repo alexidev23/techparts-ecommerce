@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { toast } from "sonner";
@@ -10,34 +10,87 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCart } from "@/context/CartContext";
-import { products, SHIPPING_FEATURES } from "@/data/products";
+import { useRequireAuth } from "@/hook/useRequireAuth";
+import { productService } from "@/services/productService";
+import { favoriteService } from "@/services/favoriteService";
+import { useAuth } from "@/hook/useAuth";
+import { SHIPPING_FEATURES } from "@/data/products";
 import { formatPrice } from "@/utils/formatters";
+import type { Product } from "@/types";
 
 export default function ProductDetailPage() {
   const { id } = useParams();
   const { addToCart } = useCart();
+  const { requireAuth } = useRequireAuth();
+  const { user } = useAuth();
   const [quantity, setQuantity] = useState(1);
+  const [product, setProduct] = useState<Product | null>(null);
+  const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [loadingFavorite, setLoadingFavorite] = useState(false);
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
 
-  const product = products.find((p) => p.id === id);
+  useEffect(() => {
+    if (!id) return;
 
-  const relatedProducts = useMemo(
-    () =>
-      product
-        ? products
-            .filter(
-              (p) => p.category === product.category && p.id !== product.id,
-            )
-            .slice(0, 4)
-        : [],
-    [product],
-  );
+    const fetchProduct = async () => {
+      setLoading(true);
+      try {
+        const data = await productService.getById(id);
+        setProduct(data);
+
+        // Traemos productos relacionados por categoría
+        const related = await productService.getAll({
+          category: data.category.name,
+        });
+        setRelatedProducts(related.filter((p) => p.id !== id).slice(0, 4));
+      } catch (error) {
+        console.error("Error al obtener producto:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProduct();
+  }, [id]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchFavorites = async () => {
+      try {
+        const favorites = await favoriteService.getMyFavorites();
+        const ids = favorites.map((f) => f.productId);
+        setFavoriteIds(ids);
+        if (id) setIsFavorite(ids.includes(id));
+      } catch {
+        // silencioso
+      }
+    };
+
+    fetchFavorites();
+  }, [user, id]);
 
   const discountPercent = useMemo(() => {
-    if (!product?.originalPrice) return null;
-    return Math.round(
-      ((product.originalPrice - product.price) / product.originalPrice) * 100,
-    );
+    if (!product?.discountPercent) return null;
+    return product.discountPercent;
   }, [product]);
+
+  const originalPrice = useMemo(() => {
+    if (!product?.discountPercent) return null;
+    return Math.round(product.price / (1 - product.discountPercent / 100));
+  }, [product]);
+
+  if (loading) {
+    return (
+      <main className="container mx-auto px-4 py-16 text-center">
+        <p className="text-slate-600 dark:text-slate-400">
+          Cargando producto...
+        </p>
+      </main>
+    );
+  }
 
   if (!product) {
     return (
@@ -50,9 +103,32 @@ export default function ProductDetailPage() {
     );
   }
 
-  const handleAddToCart = () => {
-    addToCart(product, quantity);
-    toast.success(`${quantity} producto(s) agregado(s) al carrito`);
+  const handleAddToCart = async () => {
+    await requireAuth(() => {
+      addToCart(product, quantity);
+      toast.success(`${quantity} producto(s) agregado(s) al carrito`);
+    }, "Necesitás iniciar sesión para agregar productos al carrito");
+  };
+
+  const handleToggleFavorite = async () => {
+    await requireAuth(async () => {
+      setLoadingFavorite(true);
+      try {
+        if (isFavorite) {
+          await favoriteService.remove(product.id);
+          setIsFavorite(false);
+          toast.success("Eliminado de favoritos");
+        } else {
+          await favoriteService.add(product.id);
+          setIsFavorite(true);
+          toast.success("Agregado a favoritos");
+        }
+      } catch {
+        toast.error("Error al actualizar favoritos");
+      } finally {
+        setLoadingFavorite(false);
+      }
+    }, "Necesitás iniciar sesión para agregar favoritos");
   };
 
   const incrementQuantity = () => {
@@ -66,7 +142,7 @@ export default function ProductDetailPage() {
   return (
     <>
       <Helmet>
-        <title>{product.name} | Tu Tienda</title>
+        <title>{product.category.name} | Tu Tienda</title>
         <meta
           name="description"
           content={`${product.description} Garantía de 6 meses y envío rápido.`}
@@ -78,15 +154,14 @@ export default function ProductDetailPage() {
         <meta property="og:type" content="product" />
         <meta property="og:title" content={`${product.name} | Tu Tienda`} />
         <meta property="og:description" content={product.description} />
-        <meta property="og:image" content={product.image} />
-        {/* Structured Data — Product */}
+        <meta property="og:image" content={product.imgPrincipal} />
         <script type="application/ld+json">
           {JSON.stringify({
             "@context": "https://schema.org",
             "@type": "Product",
             name: product.name,
             description: product.description,
-            image: product.image,
+            image: product.imgPrincipal,
             brand: { "@type": "Brand", name: product.brand },
             offers: {
               "@type": "Offer",
@@ -98,11 +173,12 @@ export default function ProductDetailPage() {
                   : "https://schema.org/OutOfStock",
               url: `https://tutienda.com/productos/${product.id}`,
             },
-            aggregateRating: {
-              "@type": "AggregateRating",
-              ratingValue: product.rating,
-              reviewCount: product.reviews,
-            },
+            ...(product.rating && {
+              aggregateRating: {
+                "@type": "AggregateRating",
+                ratingValue: product.rating,
+              },
+            }),
           })}
         </script>
       </Helmet>
@@ -125,7 +201,7 @@ export default function ProductDetailPage() {
             <div className="relative overflow-hidden rounded-lg border bg-white dark:bg-slate-900">
               <div className="aspect-square">
                 <img
-                  src={product.image}
+                  src={product.imgPrincipal}
                   alt={product.name}
                   className="h-full w-full object-cover"
                   width={600}
@@ -133,7 +209,7 @@ export default function ProductDetailPage() {
                   loading="eager"
                 />
               </div>
-              {product.onSale && (
+              {discountPercent && (
                 <Badge
                   variant="destructive"
                   className="absolute left-4 top-4 shadow-lg"
@@ -147,33 +223,33 @@ export default function ProductDetailPage() {
             <div className="space-y-6">
               <div>
                 <p className="text-sm text-slate-500 dark:text-slate-400">
-                  {product.category}
+                  {product.category.name}
                 </p>
                 <h1 className="mt-2 text-3xl font-bold">{product.name}</h1>
 
-                {/* Rating */}
-                <div className="mt-3 flex items-center gap-2">
-                  <div
-                    className="flex items-center gap-1"
-                    aria-label={`Calificación: ${product.rating} de 5 estrellas`}
-                  >
-                    {[...Array(5)].map((_, i) => (
-                      <Star
-                        key={i}
-                        aria-hidden="true"
-                        className={`h-5 w-5 ${
-                          i < Math.floor(product.rating)
-                            ? "fill-yellow-400 text-yellow-400"
-                            : "text-slate-300 dark:text-slate-600"
-                        }`}
-                      />
-                    ))}
+                {product.rating && (
+                  <div className="mt-3 flex items-center gap-2">
+                    <div
+                      className="flex items-center gap-1"
+                      aria-label={`Calificación: ${product.rating} de 5 estrellas`}
+                    >
+                      {[...Array(5)].map((_, i) => (
+                        <Star
+                          key={i}
+                          aria-hidden="true"
+                          className={`h-5 w-5 ${
+                            i < Math.floor(Number(product.rating))
+                              ? "fill-yellow-400 text-yellow-400"
+                              : "text-slate-300 dark:text-slate-600"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <span aria-hidden="true">
+                      {Number(product.rating).toFixed(1)}
+                    </span>
                   </div>
-                  <span aria-hidden="true">{product.rating}</span>
-                  <span className="text-slate-500 dark:text-slate-400">
-                    ({product.reviews} reseñas)
-                  </span>
-                </div>
+                )}
               </div>
 
               <Separator />
@@ -183,10 +259,10 @@ export default function ProductDetailPage() {
                 <span className="text-3xl font-bold text-blue-600 dark:text-blue-400">
                   {formatPrice(product.price)}
                 </span>
-                {product.originalPrice && discountPercent && (
+                {originalPrice && discountPercent && (
                   <>
                     <span className="text-xl text-slate-400 line-through">
-                      {formatPrice(product.originalPrice)}
+                      {formatPrice(originalPrice)}
                     </span>
                     <Badge variant="destructive">{discountPercent}% OFF</Badge>
                   </>
@@ -242,16 +318,37 @@ export default function ProductDetailPage() {
                 </div>
               </div>
 
-              {/* Add to Cart */}
-              <Button
-                size="lg"
-                className="w-full"
-                onClick={handleAddToCart}
-                disabled={product.stock === 0}
-              >
-                <ShoppingCart className="mr-2 h-5 w-5" aria-hidden="true" />
-                Agregar al carrito
-              </Button>
+              {/* Add to Cart + Favorite */}
+              <div className="flex gap-3">
+                <Button
+                  size="lg"
+                  className="flex-1"
+                  onClick={handleAddToCart}
+                  disabled={product.stock === 0}
+                >
+                  <ShoppingCart className="mr-2 h-5 w-5" aria-hidden="true" />
+                  Agregar al carrito
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={handleToggleFavorite}
+                  disabled={loadingFavorite}
+                  aria-label={
+                    isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"
+                  }
+                  className={
+                    isFavorite
+                      ? "border-red-500 text-red-500 hover:bg-red-50"
+                      : ""
+                  }
+                >
+                  <Star
+                    className={`h-5 w-5 ${isFavorite ? "fill-red-500 text-red-500" : ""}`}
+                    aria-hidden="true"
+                  />
+                </Button>
+              </div>
 
               {/* Shipping Features */}
               <ul className="space-y-3 rounded-lg border bg-white p-4 dark:bg-slate-900 list-none">
@@ -309,7 +406,7 @@ export default function ProductDetailPage() {
                 <dl className="space-y-3">
                   {[
                     { label: "Marca", value: product.brand },
-                    { label: "Categoría", value: product.category },
+                    { label: "Categoría", value: product.category.name },
                     { label: "Stock", value: `${product.stock} unidades` },
                     { label: "Garantía", value: "6 meses" },
                   ].map(({ label, value }) => (
@@ -355,7 +452,10 @@ export default function ProductDetailPage() {
               <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 list-none p-0">
                 {relatedProducts.map((related) => (
                   <li key={related.id}>
-                    <ProductCard product={related} />
+                    <ProductCard
+                      product={related}
+                      isFavorite={favoriteIds.includes(related.id)}
+                    />
                   </li>
                 ))}
               </ul>
