@@ -14,10 +14,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ArrowUpDown, MoreHorizontal } from "lucide-react";
-import type { UserInfo } from "@/types/userInfo";
+import type { User } from "@/types/user";
 
 // El array columns es lo que le pasaremos al hook useReactTable
-export const columns: ColumnDef<UserInfo>[] = [
+export const columns: ColumnDef<User>[] = [
   // --- COLUMNA: Nombre ---
   {
     accessorKey: "name", // le dice a TanStack qué propiedad del objeto User leer
@@ -107,7 +107,7 @@ export const columns: ColumnDef<UserInfo>[] = [
             <DropdownMenuLabel>Acciones</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(user.id)}
+              onClick={() => navigator.clipboard.writeText(user.id ?? "")}
             >
               Copiar ID
             </DropdownMenuItem>

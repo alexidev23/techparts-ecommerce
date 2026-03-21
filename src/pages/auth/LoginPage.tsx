@@ -39,20 +39,13 @@ export default function LoginPage() {
     },
   });
 
-  const onSubmit = (data: LoginFormData) => {
-    const success = loginUser(data.email, data.password);
+  const onSubmit = async (data: LoginFormData) => {
+    const loggedUser = await loginUser(data.email, data.password);
 
-    if (!success) {
+    if (!loggedUser) {
       form.setError("root", {
         message: "Correo o contraseña incorrectos",
       });
-      return;
-    }
-
-    const loggedUser = loginUser(data.email, data.password);
-
-    if (!loggedUser) {
-      form.setError("root", { message: "Correo o contraseña incorrectos" });
       return;
     }
 

@@ -1,67 +1,64 @@
+import api from "@/lib/axios";
 import type { User } from "@/types/user";
 
-interface FakeUser extends User {
-  password: string;
+interface AuthResponse {
+  user: User;
+  token: string;
 }
 
-const fakeUser: FakeUser[] = [
-  { email: "admin@techparts.com", password: "admin123", role: "admin" },
-  { email: "usuario@test.com", password: "user123", role: "user" },
-];
-
-const USERS_KEY = "users";
-
-const getUsers = (): FakeUser[] => {
-  const stored = localStorage.getItem(USERS_KEY);
-  return stored ? JSON.parse(stored) : fakeUser;
-};
-
 export const authService = {
-  login: (email: string, password: string) => {
-    const users = getUsers();
-
-    const user = users.find(
-      (u) => u.email === email && u.password === password,
-    );
-
-    if (!user) return null;
-
-    const loggedUser = {
-      name: user.name,
-      email: user.email,
-      role: user.role,
-    };
-
-    localStorage.setItem("authUser", JSON.stringify(loggedUser));
-
-    return loggedUser;
+  // ─── Login ───────────────────────────────────────────────────────────────
+  async login(email: string, password: string): Promise<AuthResponse> {
+    const response = await api.post<AuthResponse>("/auth/login", {
+      email,
+      password,
+    });
+    localStorage.setItem("token", response.data.token);
+    localStorage.setItem("user", JSON.stringify(response.data.user)); // guardamos el usuario
+    return response.data;
   },
 
-  register: (name: string, email: string, password: string): boolean => {
-    const users = getUsers();
-
-    const userExists = users.find((u) => u.email === email);
-    if (userExists) return false;
-
-    const newUser: FakeUser = {
+  // ─── Registro ────────────────────────────────────────────────────────────
+  async register(
+    name: string,
+    email: string,
+    password: string,
+  ): Promise<AuthResponse> {
+    const response = await api.post<AuthResponse>("/auth/register", {
       name,
       email,
       password,
-      role: "user", // siempre user por defecto
-    };
-
-    users.push(newUser);
-    localStorage.setItem(USERS_KEY, JSON.stringify(users));
-
-    return true;
+    });
+    localStorage.setItem("token", response.data.token);
+    localStorage.setItem("user", JSON.stringify(response.data.user)); // guardamos el usuario
+    return response.data;
   },
 
-  Logout: () => {
-    localStorage.removeItem("authUser");
+  // ─── Logout ──────────────────────────────────────────────────────────────
+  logout(): void {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user"); // limpiamos el usuario también
   },
 
-  getCurrentUser: (): User | null => {
-    const stored = localStorage.getItem("authUser");
-    return stored ? JSON.parse(stored) : null;
+  // ─── Obtener usuario actual ───────────────────────────────────────────────
+  getCurrentUser(): User | null {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return null;
+
+      // Verificamos que el token no haya expirado
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      if (payload.exp * 1000 < Date.now()) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        return null;
+      }
+
+      // Obtenemos el usuario guardado
+      const user = localStorage.getItem("user");
+      return user ? JSON.parse(user) : null;
+    } catch {
+      return null;
+    }
   },
 };

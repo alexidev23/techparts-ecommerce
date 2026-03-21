@@ -6,11 +6,11 @@ import { z } from "zod";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-import { authService } from "@/services/authService";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/hook/useAuth";
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
@@ -41,6 +41,7 @@ export default function CreateAccountPage() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const { registerUser } = useAuth();
 
   const form = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
@@ -52,15 +53,15 @@ export default function CreateAccountPage() {
     },
   });
 
-  const onSubmit = (data: RegisterFormData) => {
-    const created = authService.register(data.name, data.email, data.password);
+  const onSubmit = async (data: RegisterFormData) => {
+    const newUser = await registerUser(data.name, data.email, data.password);
 
-    if (!created) {
+    if (!newUser) {
       form.setError("root", { message: "El correo ya está registrado" });
       return;
     }
 
-    navigate("/login");
+    navigate("/perfil");
   };
 
   return (

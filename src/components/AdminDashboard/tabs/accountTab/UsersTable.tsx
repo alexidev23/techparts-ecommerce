@@ -2,12 +2,12 @@
 // Acá es donde en el futuro harías el fetch a tu API.
 // Por ahora usamos datos mock para que funcione de inmediato.
 
-import type { UserInfo } from "@/types/userInfo";
+import type { User } from "@/types/user";
 import { DataTable } from "../data-table";
 import { columns } from "./columns";
 
 // Datos mock — los reemplazarás por un fetch a tu API/backend
-const mockUsers: UserInfo[] = [
+const mockUsers: User[] = [
   {
     id: "1",
     name: "Carlos López",
