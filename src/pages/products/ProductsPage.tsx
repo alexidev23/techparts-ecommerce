@@ -1,11 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Filter } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 
 import type { Product, FilterOptions } from "@/types";
 import { FilterSidebar } from "@/components/FilterSidebar";
-import { products } from "@/data/products";
+import { productService } from "@/services/productService";
 import {
   Sheet,
   SheetContent,
@@ -15,9 +15,13 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "@/components/ProductCard";
+import { useAuth } from "@/hook/useAuth";
+import { favoriteService } from "@/services/favoriteService";
 
 export default function ProductsPage() {
   const [searchParams] = useSearchParams();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [filters, setFilters] = useState<FilterOptions>({
     brands: [],
@@ -27,22 +31,47 @@ export default function ProductsPage() {
   });
 
   const searchQuery = searchParams.get("search");
+  const urlCategory = searchParams.get("category");
+
+  const { user } = useAuth();
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchFavorites = async () => {
+      try {
+        const favorites = await favoriteService.getMyFavorites();
+        setFavoriteIds(favorites.map((f) => f.productId));
+      } catch {
+        // silencioso
+      }
+    };
+
+    fetchFavorites();
+  }, [user]);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+      try {
+        const data = await productService.getAll({
+          category: urlCategory ?? undefined,
+          search: searchQuery ?? undefined,
+        });
+        setProducts(data);
+      } catch (error) {
+        console.error("Error al obtener productos:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, [urlCategory, searchQuery]);
 
   const filteredProducts = useMemo<Product[]>(() => {
     let filtered = [...products];
-
-    // Category from URL
-    const urlCategory = searchParams.get("category");
-    if (urlCategory) {
-      filtered = filtered.filter((p) => p.category === urlCategory);
-    }
-
-    // Search from URL
-    if (searchQuery) {
-      filtered = filtered.filter((p) =>
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()),
-      );
-    }
 
     // Brand filter
     if (filters.brands.length > 0) {
@@ -52,7 +81,7 @@ export default function ProductsPage() {
     // Category filter
     if (filters.categories.length > 0) {
       filtered = filtered.filter((p) =>
-        filters.categories.includes(p.category),
+        filters.categories.includes(p.category.name),
       );
     }
 
@@ -75,12 +104,12 @@ export default function ProductsPage() {
         break;
       case "popular":
       default:
-        filtered.sort((a, b) => b.rating - a.rating);
+        filtered.sort((a, b) => Number(b.rating) - Number(a.rating));
         break;
     }
 
     return filtered;
-  }, [filters, searchParams, searchQuery]);
+  }, [filters, products]);
 
   const handleFilterChange = (newFilters: Partial<FilterOptions>) => {
     setFilters((prev) => ({ ...prev, ...newFilters }));
@@ -104,7 +133,6 @@ export default function ProductsPage() {
       </Helmet>
 
       <div className="container mx-auto px-4 py-8">
-        {/* Page Header */}
         <header className="mb-8">
           <h1
             id="products-heading"
@@ -130,18 +158,18 @@ export default function ProductsPage() {
 
           {/* Products Section */}
           <section className="flex-1" aria-labelledby="products-heading">
-            {/* Top bar — count + mobile filter */}
             <div className="mb-6 flex items-center justify-between">
               <p
                 className="text-slate-600 dark:text-slate-400"
                 aria-live="polite"
               >
-                {filteredProducts.length === 1
-                  ? "1 producto"
-                  : `${filteredProducts.length} productos`}
+                {loading
+                  ? "Cargando productos..."
+                  : filteredProducts.length === 1
+                    ? "1 producto"
+                    : `${filteredProducts.length} productos`}
               </p>
 
-              {/* Mobile filter button */}
               <Sheet>
                 <SheetTrigger asChild>
                   <Button variant="outline" size="sm" className="lg:hidden">
@@ -160,12 +188,20 @@ export default function ProductsPage() {
               </Sheet>
             </div>
 
-            {/* Product Grid */}
-            {filteredProducts.length > 0 ? (
+            {loading ? (
+              <div className="flex min-h-75 items-center justify-center rounded-lg border bg-white dark:bg-slate-900">
+                <p className="text-slate-600 dark:text-slate-400">
+                  Cargando productos...
+                </p>
+              </div>
+            ) : filteredProducts.length > 0 ? (
               <ul className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 list-none p-0">
                 {filteredProducts.map((product) => (
                   <li key={product.id}>
-                    <ProductCard product={product} />
+                    <ProductCard
+                      product={product}
+                      isFavorite={favoriteIds.includes(product.id)}
+                    />
                   </li>
                 ))}
               </ul>
