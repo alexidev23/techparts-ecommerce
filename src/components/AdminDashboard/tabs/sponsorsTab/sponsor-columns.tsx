@@ -1,8 +1,7 @@
 import type { ColumnDef } from "@tanstack/react-table";
-import type { Sponsor, SponsorStatus } from "@/types/sponsor";
+import type { Sponsor } from "@/types/sponsor";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,17 +13,16 @@ import {
 import { ArrowUpDown, MoreHorizontal } from "lucide-react";
 
 interface SponsorColumnsProps {
-  onToggleStatus: (id: string, currentStatus: SponsorStatus) => void;
   onEdit: (sponsor: Sponsor) => void;
   onDelete: (id: string) => void;
+  onToggleStatus: (id: string, status: string) => void;
 }
 
 export const createSponsorColumns = ({
-  onToggleStatus,
   onEdit,
   onDelete,
+  onToggleStatus,
 }: SponsorColumnsProps): ColumnDef<Sponsor>[] => [
-  // --- COLUMNA: Nombre ---
   {
     accessorKey: "name",
     header: ({ column }) => (
@@ -40,56 +38,52 @@ export const createSponsorColumns = ({
       <span className="font-medium">{row.getValue("name")}</span>
     ),
   },
-
-  // --- COLUMNA: Categoría ---
   {
-    accessorKey: "category",
-    header: "Categoría",
+    accessorKey: "logo",
+    header: "Logo",
     cell: ({ row }) => (
-      <Badge variant="outline">{row.getValue("category")}</Badge>
+      <img
+        src={row.getValue("logo")}
+        alt={row.original.name}
+        className="h-8 w-8 object-contain"
+      />
     ),
   },
-
-  // --- COLUMNA: Desde ---
   {
-    accessorKey: "since",
-    header: ({ column }) => (
-      <Button
-        variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+    accessorKey: "link",
+    header: "Link",
+    cell: ({ row }) => (
+      <a
+        href={row.getValue("link")}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-blue-600 hover:underline text-sm truncate max-w-xs block"
       >
-        Desde
-        <ArrowUpDown className="ml-2 h-4 w-4" />
-      </Button>
+        {row.getValue("link")}
+      </a>
     ),
-    cell: ({ row }) => {
-      const date = new Date(row.getValue("since"));
-      return <span>{date.toLocaleDateString("es-AR")}</span>;
-    },
   },
-
-  // --- COLUMNA: Estado con Switch ---
   {
     accessorKey: "status",
     header: "Estado",
     cell: ({ row }) => {
-      const status = row.getValue<SponsorStatus>("status");
-      const sponsor = row.original;
+      const status = row.getValue<string>("status");
       return (
-        <div className="flex items-center gap-2">
-          <Switch
-            checked={status === "activo"}
-            onCheckedChange={() => onToggleStatus(sponsor.id, status)}
-          />
-          <Badge variant={status === "activo" ? "default" : "secondary"}>
-            {status === "activo" ? "Activo" : "Inactivo"}
-          </Badge>
-        </div>
+        <Badge variant={status === "active" ? "default" : "secondary"}>
+          {status === "active" ? "Activo" : "Inactivo"}
+        </Badge>
       );
     },
   },
-
-  // --- COLUMNA: Acciones ---
+  {
+    accessorKey: "createdAt",
+    header: "Creado el",
+    cell: ({ row }) => (
+      <span>
+        {new Date(row.getValue("createdAt")).toLocaleDateString("es-AR")}
+      </span>
+    ),
+  },
   {
     id: "actions",
     header: "Acciones",
@@ -111,7 +105,7 @@ export const createSponsorColumns = ({
             <DropdownMenuItem
               onClick={() => onToggleStatus(sponsor.id, sponsor.status)}
             >
-              {sponsor.status === "activo" ? "Desactivar" : "Activar"}
+              {sponsor.status === "active" ? "Desactivar" : "Activar"}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem

@@ -1,149 +1,114 @@
 import { useState } from "react";
-import type { Sponsor, Ad, SponsorStatus, AdStatus } from "@/types/sponsor";
+import { toast } from "sonner";
+import { Plus } from "lucide-react";
+import type { Sponsor } from "@/types/sponsor";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Plus } from "lucide-react";
-import { createSponsorColumns } from "./sponsor-columns";
-import { createAdColumns } from "./ad-columns";
 import { DataTable } from "../data-table";
+import { createSponsorColumns } from "./sponsor-columns";
+import { adminService, type AdminSponsor } from "@/services/adminService";
 
-// --- DATOS MOCK ---
-const mockSponsors: Sponsor[] = [
-  {
-    id: "s1",
-    name: "Intel",
-    category: "Procesadores",
-    since: "2023-01-10",
-    status: "activo",
-  },
-  {
-    id: "s2",
-    name: "NVIDIA",
-    category: "GPU",
-    since: "2023-03-15",
-    status: "activo",
-  },
-  {
-    id: "s3",
-    name: "Corsair",
-    category: "Periféricos",
-    since: "2023-06-01",
-    status: "inactivo",
-  },
-  {
-    id: "s4",
-    name: "Samsung",
-    category: "Almacenamiento",
-    since: "2024-01-20",
-    status: "activo",
-  },
-];
+interface SponsorsTabProps {
+  sponsors: AdminSponsor[];
+  onSponsorsChange: (sponsors: AdminSponsor[]) => void;
+}
 
-const mockAds: Ad[] = [
-  {
-    id: "ad1",
-    title: "Banner Intel Core i9",
-    position: "Banner superior",
-    clicks: 4320,
-    status: "activo",
-  },
-  {
-    id: "ad2",
-    title: "Promo RTX 4070",
-    position: "Sidebar",
-    clicks: 2150,
-    status: "activo",
-  },
-  {
-    id: "ad3",
-    title: "Oferta Corsair RAM",
-    position: "Banner inferior",
-    clicks: 980,
-    status: "inactivo",
-  },
-  {
-    id: "ad4",
-    title: "Samsung SSD Campaña",
-    position: "Pop-up",
-    clicks: 6700,
-    status: "activo",
-  },
-];
-
-export default function SponsorsTab() {
-  const [sponsors, setSponsors] = useState<Sponsor[]>(mockSponsors);
-  const [ads, setAds] = useState<Ad[]>(mockAds);
-
-  // --- Estados para modales de edición ---
-  // null = modal cerrado, con valor = modal abierto con ese item
-  const [editingSponsor, setEditingSponsor] = useState<Sponsor | null>(null);
-  const [editingAd, setEditingAd] = useState<Ad | null>(null);
-
-  // --- Handlers de Sponsors ---
-  const handleToggleSponsor = (id: string, currentStatus: SponsorStatus) => {
-    setSponsors((prev) =>
-      prev.map((s) =>
-        s.id === id
-          ? { ...s, status: currentStatus === "activo" ? "inactivo" : "activo" }
-          : s,
-      ),
-    );
-  };
-
-  const handleDeleteSponsor = (id: string) => {
-    setSponsors((prev) => prev.filter((s) => s.id !== id));
-  };
-
-  // --- Handlers de Publicidades ---
-  const handleToggleAd = (id: string, currentStatus: AdStatus) => {
-    setAds((prev) =>
-      prev.map((a) =>
-        a.id === id
-          ? { ...a, status: currentStatus === "activo" ? "inactivo" : "activo" }
-          : a,
-      ),
-    );
-  };
-
-  const handleDeleteAd = (id: string) => {
-    setAds((prev) => prev.filter((a) => a.id !== id));
-  };
-
-  // --- Columnas ---
-  const sponsorColumns = createSponsorColumns({
-    onToggleStatus: handleToggleSponsor,
-    onEdit: setEditingSponsor,
-    onDelete: handleDeleteSponsor,
+export default function SponsorsTab({
+  sponsors,
+  onSponsorsChange,
+}: SponsorsTabProps) {
+  const [editingSponsor, setEditingSponsor] = useState<AdminSponsor | null>(
+    null,
+  );
+  const [addOpen, setAddOpen] = useState(false);
+  const [newSponsor, setNewSponsor] = useState({
+    name: "",
+    logo: "",
+    link: "",
   });
 
-  const adColumns = createAdColumns({
-    onToggleStatus: handleToggleAd,
-    onEdit: setEditingAd,
-    onDelete: handleDeleteAd,
+  const handleAdd = async () => {
+    if (!newSponsor.name || !newSponsor.logo || !newSponsor.link) {
+      toast.error("Todos los campos son requeridos");
+      return;
+    }
+    try {
+      const created = await adminService.createSponsor(newSponsor);
+      onSponsorsChange([created, ...sponsors]);
+      toast.success("Sponsor agregado correctamente");
+      setNewSponsor({ name: "", logo: "", link: "" });
+      setAddOpen(false);
+    } catch {
+      toast.error("Error al agregar el sponsor");
+    }
+  };
+
+  const handleEdit = async () => {
+    if (!editingSponsor) return;
+    try {
+      const updated = await adminService.updateSponsor(editingSponsor.id, {
+        name: editingSponsor.name,
+        logo: editingSponsor.logo,
+        link: editingSponsor.link,
+      });
+      onSponsorsChange(
+        sponsors.map((s) => (s.id === updated.id ? updated : s)),
+      );
+      toast.success("Sponsor actualizado correctamente");
+      setEditingSponsor(null);
+    } catch {
+      toast.error("Error al actualizar el sponsor");
+    }
+  };
+
+  const handleToggleStatus = async (id: string, currentStatus: string) => {
+    const newStatus = currentStatus === "active" ? "inactive" : "active";
+    try {
+      const updated = await adminService.updateSponsor(id, {
+        status: newStatus,
+      });
+      onSponsorsChange(sponsors.map((s) => (s.id === id ? updated : s)));
+      toast.success("Estado actualizado correctamente");
+    } catch {
+      toast.error("Error al actualizar el estado");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await adminService.deleteSponsor(id);
+      onSponsorsChange(sponsors.filter((s) => s.id !== id));
+      toast.success("Sponsor eliminado correctamente");
+    } catch {
+      toast.error("Error al eliminar el sponsor");
+    }
+  };
+
+  const sponsorColumns = createSponsorColumns({
+    onEdit: (s) => setEditingSponsor(s as AdminSponsor),
+    onDelete: handleDelete,
+    onToggleStatus: handleToggleStatus,
   });
 
   return (
     <div className="p-6 space-y-10 bg-white rounded-lg shadow dark:bg-gray-950">
-      {/* ===== SECCIÓN SPONSORS ===== */}
+      {/* SPONSORS */}
       <section className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Gestión de Sponsors</h1>
+            <h2 className="text-2xl font-bold">Gestión de Sponsors</h2>
             <p className="text-muted-foreground">
-              Administrá los sponsors de TechParts
+              Administrá los sponsors del carrusel de TechParts
             </p>
           </div>
-
-          {/* Agregar sponsor — DialogTrigger sin estado */}
-          <Dialog>
+          <Dialog open={addOpen} onOpenChange={setAddOpen}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="mr-2 h-4 w-4" />
@@ -153,67 +118,60 @@ export default function SponsorsTab() {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Agregar nuevo sponsor</DialogTitle>
-                <DialogDescription>
-                  Completá los datos del nuevo sponsor
-                </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-2">
-                <Input placeholder="Nombre del sponsor" />
-                <Input placeholder="Categoría" />
-                <Input placeholder="Fecha de inicio" type="date" />
-                <div className="flex justify-end gap-2 pt-2">
-                  <Button variant="outline">Cancelar</Button>
-                  <Button>Guardar sponsor</Button>
+                <Input
+                  placeholder="Nombre del sponsor"
+                  value={newSponsor.name}
+                  onChange={(e) =>
+                    setNewSponsor({ ...newSponsor, name: e.target.value })
+                  }
+                />
+                <Input
+                  placeholder="URL del logo"
+                  value={newSponsor.logo}
+                  onChange={(e) =>
+                    setNewSponsor({ ...newSponsor, logo: e.target.value })
+                  }
+                />
+                <Input
+                  placeholder="URL del sitio web"
+                  value={newSponsor.link}
+                  onChange={(e) =>
+                    setNewSponsor({ ...newSponsor, link: e.target.value })
+                  }
+                />
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setAddOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleAdd}>Guardar</Button>
                 </div>
               </div>
             </DialogContent>
           </Dialog>
         </div>
 
-        <DataTable columns={sponsorColumns} data={sponsors} />
+        <DataTable
+          columns={sponsorColumns}
+          data={sponsors as unknown as Sponsor[]}
+        />
       </section>
 
-      {/* ===== SECCIÓN PUBLICIDADES ===== */}
+      {/* PUBLICIDADES — placeholder */}
       <section className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Gestión de Publicidades</h1>
-            <p className="text-muted-foreground">
-              Administrá las publicidades activas de TechParts
-            </p>
-          </div>
-
-          {/* Agregar publicidad — DialogTrigger sin estado */}
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Agregar publicidad
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Agregar nueva publicidad</DialogTitle>
-                <DialogDescription>
-                  Completá los datos de la nueva publicidad
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-2">
-                <Input placeholder="Título de la publicidad" />
-                <Input placeholder="Posición (ej: Banner superior)" />
-                <div className="flex justify-end gap-2 pt-2">
-                  <Button variant="outline">Cancelar</Button>
-                  <Button>Guardar publicidad</Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+        <div>
+          <h2 className="text-2xl font-bold">Gestión de Publicidades</h2>
+          <p className="text-muted-foreground">
+            Administrá las publicidades activas de TechParts
+          </p>
         </div>
-
-        <DataTable columns={adColumns} data={ads} />
+        <div className="flex items-center justify-center rounded-lg border border-dashed p-12">
+          <p className="text-muted-foreground text-sm">Próximamente</p>
+        </div>
       </section>
 
-      {/* ===== MODAL EDITAR SPONSOR — controlado por estado ===== */}
+      {/* MODAL EDITAR SPONSOR */}
       <Dialog
         open={!!editingSponsor}
         onOpenChange={() => setEditingSponsor(null)}
@@ -221,52 +179,40 @@ export default function SponsorsTab() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Editar sponsor</DialogTitle>
-            <DialogDescription>
-              Modificá los datos de {editingSponsor?.name}
-            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <Input placeholder="Nombre" defaultValue={editingSponsor?.name} />
             <Input
-              placeholder="Categoría"
-              defaultValue={editingSponsor?.category}
+              placeholder="Nombre"
+              value={editingSponsor?.name ?? ""}
+              onChange={(e) =>
+                setEditingSponsor((prev) =>
+                  prev ? { ...prev, name: e.target.value } : null,
+                )
+              }
             />
             <Input
-              placeholder="Desde"
-              type="date"
-              defaultValue={editingSponsor?.since}
+              placeholder="URL del logo"
+              value={editingSponsor?.logo ?? ""}
+              onChange={(e) =>
+                setEditingSponsor((prev) =>
+                  prev ? { ...prev, logo: e.target.value } : null,
+                )
+              }
             />
-            <div className="flex justify-end gap-2 pt-2">
+            <Input
+              placeholder="URL del sitio web"
+              value={editingSponsor?.link ?? ""}
+              onChange={(e) =>
+                setEditingSponsor((prev) =>
+                  prev ? { ...prev, link: e.target.value } : null,
+                )
+              }
+            />
+            <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setEditingSponsor(null)}>
                 Cancelar
               </Button>
-              <Button onClick={() => setEditingSponsor(null)}>
-                Guardar cambios
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* ===== MODAL EDITAR PUBLICIDAD — controlado por estado ===== */}
-      <Dialog open={!!editingAd} onOpenChange={() => setEditingAd(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar publicidad</DialogTitle>
-            <DialogDescription>
-              Modificá los datos de {editingAd?.title}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <Input placeholder="Título" defaultValue={editingAd?.title} />
-            <Input placeholder="Posición" defaultValue={editingAd?.position} />
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setEditingAd(null)}>
-                Cancelar
-              </Button>
-              <Button onClick={() => setEditingAd(null)}>
-                Guardar cambios
-              </Button>
+              <Button onClick={handleEdit}>Guardar cambios</Button>
             </div>
           </div>
         </DialogContent>

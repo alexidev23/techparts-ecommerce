@@ -90,6 +90,15 @@ export interface AdminSubcategory {
   _count?: { products: number };
 }
 
+export interface AdminSponsor {
+  id: string;
+  name: string;
+  logo: string;
+  link: string;
+  status: string;
+  createdAt: string;
+}
+
 export const adminService = {
   async getStats(): Promise<AdminStats> {
     const response = await api.get<AdminStats>("/admin/stats");
@@ -221,5 +230,37 @@ export const adminService = {
       { name },
     );
     return response.data;
+  },
+
+  // Agregá estos métodos al objeto adminService
+  async getSponsors(): Promise<AdminSponsor[]> {
+    const response = await api.get<AdminSponsor[]>("/sponsors");
+    return response.data;
+  },
+
+  async createSponsor(data: {
+    name: string;
+    logo: string;
+    link: string;
+  }): Promise<AdminSponsor> {
+    const response = await api.post<AdminSponsor>("/sponsors", data);
+    return response.data;
+  },
+
+  async updateSponsor(
+    id: string,
+    data: Partial<{
+      name: string;
+      logo: string;
+      link: string;
+      status: string;
+    }>,
+  ): Promise<AdminSponsor> {
+    const response = await api.put<AdminSponsor>(`/sponsors/${id}`, data);
+    return response.data;
+  },
+
+  async deleteSponsor(id: string): Promise<void> {
+    await api.delete(`/sponsors/${id}`);
   },
 };

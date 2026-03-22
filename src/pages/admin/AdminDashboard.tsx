@@ -22,6 +22,7 @@ import {
   type AdminCategory,
   type AdminOrder,
   type AdminProduct,
+  type AdminSponsor,
   type AdminStats,
   type AdminSubcategory,
   type AdminUser,
@@ -59,6 +60,7 @@ export default function AdminDashboard() {
   const [adminSubcategories, setAdminSubcategories] = useState<
     AdminSubcategory[]
   >([]);
+  const [sponsors, setSponsors] = useState<AdminSponsor[]>([]);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -70,6 +72,7 @@ export default function AdminDashboard() {
           productsData,
           categoriesData,
           subcategoriesData,
+          sponsorsData,
         ] = await Promise.all([
           adminService.getStats(),
           adminService.getUsers(),
@@ -77,6 +80,7 @@ export default function AdminDashboard() {
           adminService.getProducts(),
           adminService.getCategories(),
           adminService.getSubcategories(),
+          adminService.getSponsors(),
         ]);
         setStats(statsData);
         setUsers(usersData);
@@ -84,6 +88,7 @@ export default function AdminDashboard() {
         setAdminProducts(productsData);
         setAdminCategories(categoriesData);
         setAdminSubcategories(subcategoriesData);
+        setSponsors(sponsorsData);
       } catch (error) {
         console.error("Error al obtener estadísticas:", error);
       } finally {
@@ -112,7 +117,9 @@ export default function AdminDashboard() {
         onSubcategoriesChange={setAdminSubcategories}
       />
     ),
-    sponsors: <SponsorsTab />,
+    sponsors: (
+      <SponsorsTab sponsors={sponsors} onSponsorsChange={setSponsors} />
+    ),
   };
 
   return (
