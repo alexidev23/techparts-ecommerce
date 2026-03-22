@@ -4,7 +4,6 @@ import {
   CarouselContent,
   CarouselItem,
 } from "@/components/ui/carousel";
-import Autoplay from "embla-carousel-autoplay";
 import { sponsorService } from "@/services/sponsorService";
 import type { Sponsor } from "@/types/sponsor";
 
@@ -35,11 +34,7 @@ export function SponsorsCarousel() {
         <p className="text-center text-xs text-slate-400 dark:text-slate-500 mb-4 uppercase tracking-widest">
           Nuestros sponsors
         </p>
-        <Carousel
-          opts={{ loop: true, align: "center" }}
-          plugins={[Autoplay({ delay: 2500, stopOnInteraction: false })]}
-          className="w-full"
-        >
+        <Carousel opts={{ loop: true, align: "center" }} className="w-full">
           <CarouselContent>
             {sponsors.map((sponsor) => (
               <CarouselItem
