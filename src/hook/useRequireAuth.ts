@@ -12,7 +12,7 @@ export function useRequireAuth() {
   ) => {
     if (!user) {
       toast.error(message ?? "Necesitás iniciar sesión para continuar");
-      navigate("/login");
+      setTimeout(() => navigate("/login"), 1500);
       return;
     }
     await callback();
