@@ -1,9 +1,15 @@
+import type { AdminOrder } from "@/services/adminService";
 import OrdersTable from "./OrdersTable";
 
-export default function OrdersTab() {
+interface OrdersTabProps {
+  orders: AdminOrder[];
+  onOrdersChange: (orders: AdminOrder[]) => void;
+}
+
+export default function OrdersTab({ orders, onOrdersChange }: OrdersTabProps) {
   return (
     <div className="w-full rounded-lg bg-white p-6 shadow dark:bg-gray-950">
-      <OrdersTable />
+      <OrdersTable orders={orders} onOrdersChange={onOrdersChange} />
     </div>
   );
 }

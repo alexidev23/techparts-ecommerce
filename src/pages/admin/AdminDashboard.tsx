@@ -1,4 +1,5 @@
 import { Helmet } from "react-helmet-async";
+import { useState, useEffect } from "react";
 import {
   ChartColumn,
   CircleStar,
@@ -16,6 +17,14 @@ import GeneralTab from "@/components/AdminDashboard/tabs/generalTabs/GeneralTab"
 import OrdersTab from "@/components/AdminDashboard/tabs/ordersTabs/OrdersTab";
 import ProductsTabs from "@/components/AdminDashboard/tabs/productsTabs/ProductsTab";
 import SponsorsTab from "@/components/AdminDashboard/tabs/sponsorsTab/SponsorsTab";
+import {
+  adminService,
+  type AdminOrder,
+  type AdminProduct,
+  type AdminStats,
+  type AdminUser,
+} from "@/services/adminService";
+import { useSearchParams } from "react-router-dom";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -34,18 +43,55 @@ const TABS: TabItem[] = [
   { value: "sponsors", label: "Sponsors", icon: CircleStar },
 ];
 
-const TAB_CONTENT: Record<string, React.ReactNode> = {
-  general: <GeneralTab />,
-  cuentas: <AccountsTab />,
-  pedidos: <OrdersTab />,
-  productos: <ProductsTabs />,
-  categorias: <CategoriesTab />,
-  sponsors: <SponsorsTab />,
-};
-
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AdminDashboard() {
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") ?? "general";
+  const [orders, setOrders] = useState<AdminOrder[]>([]);
+  const [adminProducts, setAdminProducts] = useState<AdminProduct[]>([]);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const [statsData, usersData, ordersData, productsData] =
+          await Promise.all([
+            adminService.getStats(),
+            adminService.getUsers(),
+            adminService.getOrders(),
+            adminService.getProducts(),
+          ]);
+        setStats(statsData);
+        setUsers(usersData);
+        setOrders(ordersData);
+        setAdminProducts(productsData);
+      } catch (error) {
+        console.error("Error al obtener estadísticas:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, []);
+
+  const TAB_CONTENT: Record<string, React.ReactNode> = {
+    general: <GeneralTab stats={stats} loading={loading} />,
+    cuentas: <AccountsTab users={users} onUsersChange={setUsers} />,
+    pedidos: <OrdersTab orders={orders} onOrdersChange={setOrders} />,
+    productos: (
+      <ProductsTabs
+        products={adminProducts}
+        onProductsChange={setAdminProducts}
+      />
+    ),
+    categorias: <CategoriesTab />,
+    sponsors: <SponsorsTab />,
+  };
+
   return (
     <>
       <Helmet>
@@ -68,7 +114,11 @@ export default function AdminDashboard() {
           className="w-full bg-gray-200 dark:bg-gray-900"
         >
           <div className="container mx-auto max-w-7xl px-4 py-6">
-            <Tabs defaultValue="general" className="w-full">
+            <Tabs
+              value={activeTab}
+              onValueChange={(value) => setSearchParams({ tab: value })}
+              className="w-full"
+            >
               <TabsList
                 className="
                   h-auto! w-full grid grid-cols-2 gap-2

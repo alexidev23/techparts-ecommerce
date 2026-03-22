@@ -1,80 +1,43 @@
-// La página del panel admin que junta todo.
-// Acá es donde en el futuro harías el fetch a tu API.
-// Por ahora usamos datos mock para que funcione de inmediato.
-
-import type { User } from "@/types/user";
+import { useState } from "react";
+import type { AdminUser } from "@/services/adminService";
+import { adminService } from "@/services/adminService";
 import { DataTable } from "../data-table";
-import { columns } from "./columns";
+import { createColumns } from "./columns";
+import { UserViewModal } from "./UserViewModal";
+import { UserEditModal } from "./UserEditModal";
+import { toast } from "sonner";
 
-// Datos mock — los reemplazarás por un fetch a tu API/backend
-const mockUsers: User[] = [
-  {
-    id: "1",
-    name: "Carlos López",
-    email: "carlos@techparts.com",
-    role: "admin",
-    status: "active",
-    createdAt: "2024-01-15",
-  },
-  {
-    id: "2",
-    name: "María García",
-    email: "maria@gmail.com",
-    role: "user",
-    status: "active",
-    createdAt: "2024-02-20",
-  },
-  {
-    id: "3",
-    name: "Juan Pérez",
-    email: "juan@gmail.com",
-    role: "user",
-    status: "inactive",
-    createdAt: "2024-03-05",
-  },
-  {
-    id: "4",
-    name: "Ana Martínez",
-    email: "ana@techparts.com",
-    role: "admin",
-    status: "active",
-    createdAt: "2024-03-10",
-  },
-  {
-    id: "5",
-    name: "Luis Fernández",
-    email: "luis@gmail.com",
-    role: "user",
-    status: "active",
-    createdAt: "2024-04-01",
-  },
-  {
-    id: "6",
-    name: "Sofía Torres",
-    email: "sofia@gmail.com",
-    role: "user",
-    status: "inactive",
-    createdAt: "2024-04-15",
-  },
-  {
-    id: "7",
-    name: "Diego Ramírez",
-    email: "diego@gmail.com",
-    role: "user",
-    status: "active",
-    createdAt: "2024-05-01",
-  },
-  {
-    id: "8",
-    name: "Valentina Díaz",
-    email: "vale@techparts.com",
-    role: "admin",
-    status: "active",
-    createdAt: "2024-05-20",
-  },
-];
+interface UsersTableProps {
+  users: AdminUser[];
+  onUsersChange: (users: AdminUser[]) => void;
+}
 
-export default function UsersTable() {
+export default function UsersTable({ users, onUsersChange }: UsersTableProps) {
+  const [viewUser, setViewUser] = useState<AdminUser | null>(null);
+  const [editUser, setEditUser] = useState<AdminUser | null>(null);
+
+  const handleSave = async (
+    id: string,
+    data: {
+      name?: string;
+      role?: "admin" | "user";
+      status?: "active" | "inactive";
+    },
+  ) => {
+    try {
+      const updated = await adminService.updateUser(id, data);
+      onUsersChange(users.map((u) => (u.id === id ? { ...u, ...updated } : u)));
+      toast.success("Usuario actualizado correctamente");
+    } catch {
+      toast.error("Error al actualizar el usuario");
+    }
+  };
+
+  const columns = createColumns({
+    onView: (user) => setViewUser(user),
+    onEdit: (user) => setEditUser(user),
+  });
+
   return (
     <section aria-labelledby="users-table-title" className="space-y-6 p-6">
       <header>
@@ -86,7 +49,20 @@ export default function UsersTable() {
         </p>
       </header>
 
-      <DataTable columns={columns} data={mockUsers} />
+      <DataTable columns={columns} data={users} />
+
+      <UserViewModal
+        user={viewUser}
+        open={!!viewUser}
+        onClose={() => setViewUser(null)}
+      />
+
+      <UserEditModal
+        user={editUser}
+        open={!!editUser}
+        onClose={() => setEditUser(null)}
+        onSave={handleSave}
+      />
     </section>
   );
 }

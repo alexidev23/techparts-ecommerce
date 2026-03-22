@@ -13,10 +13,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ArrowUpDown, MoreHorizontal } from "lucide-react";
-import type { Order, OrderStatus } from "@/types/orders";
+import type { AdminOrder } from "@/services/adminService";
+import type { OrderStatus } from "@/types/orders";
+import { formatPrice } from "@/utils/formatters";
 
-// Configuración visual de cada estado — color del badge y label
-const statusConfig: Record<
+const STATUS_CONFIG: Record<
   OrderStatus,
   {
     label: string;
@@ -29,137 +30,121 @@ const statusConfig: Record<
   cancelado: { label: "Cancelado", variant: "destructive" },
 };
 
-export const columns: ColumnDef<Order>[] = [
-  // --- COLUMNA: ID ---
-  {
-    accessorKey: "id",
-    header: "ID",
-    // Mostramos solo los primeros 8 caracteres para no ocupar demasiado espacio
-    cell: ({ row }) => (
-      <span className="text-muted-foreground text-sm font-mono">
-        #{row.getValue<string>("id").slice(0, 8)}
-      </span>
-    ),
-  },
+interface OrderColumnCallbacks {
+  onView: (order: AdminOrder) => void;
+  onStatusChange: (id: string, status: OrderStatus) => void;
+}
 
-  // --- COLUMNA: Cliente ---
-  {
-    accessorKey: "clientName",
-    header: ({ column }) => (
-      <Button
-        variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
-        Cliente
-        <ArrowUpDown className="ml-2 h-4 w-4" />
-      </Button>
-    ),
-  },
-
-  // --- COLUMNA: Fecha ---
-  {
-    accessorKey: "date",
-    header: ({ column }) => (
-      <Button
-        variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
-        Fecha
-        <ArrowUpDown className="ml-2 h-4 w-4" />
-      </Button>
-    ),
-    cell: ({ row }) => {
-      const date = new Date(row.getValue("date"));
-      return <span>{date.toLocaleDateString("es-AR")}</span>;
-    },
-  },
-
-  // --- COLUMNA: Total ---
-  {
-    accessorKey: "total",
-    header: ({ column }) => (
-      <Button
-        variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
-        Total
-        <ArrowUpDown className="ml-2 h-4 w-4" />
-      </Button>
-    ),
-    // Formateamos el número como moneda
-    cell: ({ row }) => {
-      const total = row.getValue<number>("total");
-      return (
-        <span className="font-medium">
-          ${total.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+export function createOrderColumns({
+  onView,
+  onStatusChange,
+}: OrderColumnCallbacks): ColumnDef<AdminOrder>[] {
+  return [
+    {
+      accessorKey: "id",
+      header: "ID",
+      cell: ({ row }) => (
+        <span className="text-muted-foreground text-sm font-mono">
+          #{row.getValue<string>("id").slice(0, 8).toUpperCase()}
         </span>
-      );
+      ),
     },
-  },
-
-  // --- COLUMNA: Estado ---
-  {
-    accessorKey: "status",
-    header: "Estado",
-    cell: ({ row }) => {
-      const status = row.getValue<OrderStatus>("status");
-      const { label, variant } = statusConfig[status];
-      return <Badge variant={variant}>{label}</Badge>;
+    {
+      id: "clientName",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Cliente
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => (
+        <span>{row.original.user.name ?? row.original.user.email}</span>
+      ),
     },
-  },
-
-  // --- COLUMNA: Acciones ---
-  {
-    id: "actions",
-    header: "Acciones",
-    cell: ({ row }) => {
-      const order = row.original;
-
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-
-            {/* Ver detalle — en el futuro navegás a /admin/orders/:id */}
-            <DropdownMenuItem>Ver detalle del pedido</DropdownMenuItem>
-
-            {/* Cambiar estado — submenú con los 4 estados posibles */}
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>Cambiar estado</DropdownMenuSubTrigger>
-              <DropdownMenuSubContent>
-                {(Object.keys(statusConfig) as OrderStatus[]).map((status) => (
-                  <DropdownMenuItem
-                    key={status}
-                    // Deshabilitamos el estado actual para no seleccionarlo de nuevo
-                    disabled={order.status === status}
-                    onClick={() =>
-                      console.log(`Cambiar ${order.id} a ${status}`)
-                    }
-                  >
-                    {statusConfig[status].label}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-
-            <DropdownMenuSeparator />
-
-            {/* Eliminar — en rojo para indicar acción destructiva */}
-            <DropdownMenuItem
-              className="text-red-600"
-              onClick={() => console.log(`Eliminar pedido ${order.id}`)}
-            >
-              Eliminar pedido
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      );
+    {
+      accessorKey: "createdAt",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Fecha
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => (
+        <span>
+          {new Date(row.getValue("createdAt")).toLocaleDateString("es-AR")}
+        </span>
+      ),
     },
-  },
-];
+    {
+      accessorKey: "totalPrice",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Total
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => (
+        <span className="font-medium">
+          {formatPrice(Number(row.getValue("totalPrice")))}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "status",
+      header: "Estado",
+      cell: ({ row }) => {
+        const status = row.getValue<OrderStatus>("status");
+        const { label, variant } = STATUS_CONFIG[status];
+        return <Badge variant={variant}>{label}</Badge>;
+      },
+    },
+    {
+      id: "actions",
+      header: "Acciones",
+      cell: ({ row }) => {
+        const order = row.original;
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => onView(order)}>
+                Ver detalle
+              </DropdownMenuItem>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>Cambiar estado</DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  {(Object.keys(STATUS_CONFIG) as OrderStatus[]).map(
+                    (status) => (
+                      <DropdownMenuItem
+                        key={status}
+                        disabled={order.status === status}
+                        onClick={() => onStatusChange(order.id, status)}
+                      >
+                        {STATUS_CONFIG[status].label}
+                      </DropdownMenuItem>
+                    ),
+                  )}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
+    },
+  ];
+}
