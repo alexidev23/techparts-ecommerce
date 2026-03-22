@@ -1,24 +1,58 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import HomeHeroImage from "@/assets/img/img-home1.jpg";
-import { products } from "@/data/products";
 import { FEATURES } from "@/data/homeData";
 import { FeatureCard } from "@/components/home/FeatureCard";
 import { ProductSection } from "@/components/home/ProductSection";
+import { productService } from "@/services/productService";
+import { favoriteService } from "@/services/favoriteService";
+import { useAuth } from "@/hook/useAuth";
+import type { Product } from "@/types";
 
 export default function HomePage() {
-  const featuredProducts = useMemo(
-    () => products.filter((p) => p.featured),
-    [],
+  const { user } = useAuth();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const data = await productService.getAll();
+        setProducts(data);
+      } catch (error) {
+        console.error("Error al obtener productos:", error);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchFavorites = async () => {
+      try {
+        const favorites = await favoriteService.getMyFavorites();
+        setFavoriteIds(favorites.map((f) => f.productId));
+      } catch {
+        // silencioso
+      }
+    };
+
+    fetchFavorites();
+  }, [user]);
+
+  const featuredProducts = useMemo(() => products.slice(0, 4), [products]);
+
+  const bestsellerProducts = useMemo(() => products.slice(4, 8), [products]);
+
+  const saleProducts = useMemo(
+    () => products.filter((p) => p.discountPercent > 0),
+    [products],
   );
-  const bestsellerProducts = useMemo(
-    () => products.slice(0, 4).filter((p) => p.bestseller),
-    [],
-  );
-  const saleProducts = useMemo(() => products.filter((p) => p.onSale), []);
 
   return (
     <>
@@ -32,9 +66,7 @@ export default function HomePage() {
           name="keywords"
           content="repuestos celulares, accesorios smartphone, pantallas, baterías, cargadores"
         />
-        {/* reemplazar "https://tutienda.com" por la URL real  */}
         <link rel="canonical" href="https://tutienda.com/" />
-        {/* Open Graph */}
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://tutienda.com/" />
         <meta
@@ -46,7 +78,6 @@ export default function HomePage() {
           content="Encontrá repuestos y accesorios para tu smartphone con garantía de 6 meses y envío en 24-48 horas."
         />
         <meta property="og:image" content={HomeHeroImage} />
-        {/* Structured Data */}
         <script type="application/ld+json">
           {JSON.stringify({
             "@context": "https://schema.org",
@@ -95,8 +126,7 @@ export default function HomePage() {
                   <Link to="/productos?category=Ofertas">
                     <Button
                       size="lg"
-                      variant="outline"
-                      className="w-full border-white text-white hover:bg-white/10 sm:w-auto"
+                      className="w-full bg-blue-500 text-white hover:bg-white/10 sm:w-auto hover:border"
                     >
                       Ver ofertas
                     </Button>
@@ -134,29 +164,35 @@ export default function HomePage() {
         </section>
 
         {/* Featured Products */}
-        <section aria-label="Productos destacados">
-          <ProductSection
-            title="Productos Destacados"
-            description="Los repuestos más populares y de mejor calidad"
-            linkTo="/productos"
-            linkLabel="Ver todos"
-            productList={featuredProducts}
-          />
-        </section>
+        {featuredProducts.length > 0 && (
+          <section aria-label="Productos destacados">
+            <ProductSection
+              title="Productos Destacados"
+              description="Los repuestos más populares y de mejor calidad"
+              linkTo="/productos"
+              linkLabel="Ver todos"
+              productList={featuredProducts}
+              favoriteIds={favoriteIds}
+            />
+          </section>
+        )}
 
         {/* Bestsellers */}
-        <section
-          aria-label="Productos más vendidos"
-          className="border-t bg-slate-50 dark:bg-slate-900"
-        >
-          <ProductSection
-            title="Más Vendidos"
-            description="Los productos preferidos por nuestros clientes"
-            linkTo="/productos?sort=bestseller"
-            linkLabel="Ver todos"
-            productList={bestsellerProducts}
-          />
-        </section>
+        {bestsellerProducts.length > 0 && (
+          <section
+            aria-label="Productos más vendidos"
+            className="border-t bg-slate-50 dark:bg-slate-900"
+          >
+            <ProductSection
+              title="Más Vendidos"
+              description="Los productos preferidos por nuestros clientes"
+              linkTo="/productos"
+              linkLabel="Ver todos"
+              productList={bestsellerProducts}
+              favoriteIds={favoriteIds}
+            />
+          </section>
+        )}
 
         {/* Sales */}
         {saleProducts.length > 0 && (
@@ -164,9 +200,10 @@ export default function HomePage() {
             <ProductSection
               title="Ofertas Especiales"
               description="Aprovecha estos descuentos por tiempo limitado"
-              linkTo="/productos?sale=true"
+              linkTo="/productos"
               linkLabel="Ver todas"
               productList={saleProducts}
+              favoriteIds={favoriteIds}
             />
           </section>
         )}

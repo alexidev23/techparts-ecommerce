@@ -118,7 +118,7 @@ export default function ProductsPage() {
   return (
     <main className="min-h-screen bg-slate-50 dark:bg-slate-950">
       <Helmet>
-        <title>Productos | Tu Tienda</title>
+        <title>{urlCategory ?? "Productos"} | Tu Tienda</title>
         <meta
           name="description"
           content="Explorá nuestra selección de repuestos y accesorios para smartphones. Filtrá por marca, categoría y precio."
@@ -138,7 +138,7 @@ export default function ProductsPage() {
             id="products-heading"
             className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100"
           >
-            Productos
+            {urlCategory ?? "Productos"}
           </h1>
           <p className="mt-2 text-slate-600 dark:text-slate-400">
             Explora nuestra amplia selección de repuestos y accesorios

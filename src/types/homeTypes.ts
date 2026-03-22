@@ -1,5 +1,5 @@
-import type { products } from "@/data/products";
 import type { LucideIcon } from "lucide-react";
+import type { Product } from "@/types";
 
 export interface FeatureItem {
   icon: LucideIcon;
@@ -12,5 +12,6 @@ export interface ProductSectionProps {
   description: string;
   linkTo: string;
   linkLabel: string;
-  productList: typeof products;
+  productList: Product[];
+  favoriteIds?: string[];
 }
