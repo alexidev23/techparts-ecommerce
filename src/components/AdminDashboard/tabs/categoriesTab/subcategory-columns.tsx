@@ -1,5 +1,5 @@
 import type { ColumnDef } from "@tanstack/react-table";
-import type { Subcategory, CategoryStatus } from "@/types/category";
+import type { Subcategory } from "@/types/category";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,13 +15,14 @@ import { ArrowUpDown, MoreHorizontal } from "lucide-react";
 interface SubcategoryColumnsProps {
   onEdit: (subcategory: Subcategory) => void;
   onDelete: (id: string) => void;
+  onViewProducts: (subcategory: Subcategory) => void;
 }
 
 export const createSubcategoryColumns = ({
   onEdit,
   onDelete,
+  onViewProducts,
 }: SubcategoryColumnsProps): ColumnDef<Subcategory>[] => [
-  // --- COLUMNA: Nombre ---
   {
     accessorKey: "name",
     header: ({ column }) => (
@@ -37,48 +38,34 @@ export const createSubcategoryColumns = ({
       <span className="font-medium">{row.getValue("name")}</span>
     ),
   },
-
-  // --- COLUMNA: Categoría principal ---
   {
-    accessorKey: "parentCategory",
+    id: "parentCategory",
     header: "Categoría principal",
     cell: ({ row }) => (
-      <Badge variant="outline">{row.getValue("parentCategory")}</Badge>
+      <Badge variant="outline">
+        {row.original.category?.name ?? "Sin categoría"}
+      </Badge>
     ),
   },
-
-  // --- COLUMNA: Total productos ---
   {
-    accessorKey: "totalProducts",
-    header: ({ column }) => (
-      <Button
-        variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
-        Productos
-        <ArrowUpDown className="ml-2 h-4 w-4" />
-      </Button>
-    ),
+    id: "totalProducts",
+    header: "Productos",
     cell: ({ row }) => (
-      <span>{row.getValue<number>("totalProducts")} productos</span>
+      <span>{row.original._count?.products ?? 0} productos</span>
     ),
   },
-
-  // --- COLUMNA: Estado ---
   {
     accessorKey: "status",
     header: "Estado",
     cell: ({ row }) => {
-      const status = row.getValue<CategoryStatus>("status");
+      const status = row.getValue<string>("status");
       return (
-        <Badge variant={status === "activo" ? "default" : "secondary"}>
-          {status === "activo" ? "Activo" : "Inactivo"}
+        <Badge variant={status === "active" ? "default" : "secondary"}>
+          {status === "active" ? "Activo" : "Inactivo"}
         </Badge>
       );
     },
   },
-
-  // --- COLUMNA: Acciones ---
   {
     id: "actions",
     header: "Acciones",
@@ -94,10 +81,12 @@ export const createSubcategoryColumns = ({
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Acciones</DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => onViewProducts(subcategory)}>
+              Ver productos
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onEdit(subcategory)}>
               Editar subcategoría
             </DropdownMenuItem>
-            <DropdownMenuItem>Ver productos</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-red-600"

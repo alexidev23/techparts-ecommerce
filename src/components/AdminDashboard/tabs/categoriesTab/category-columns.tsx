@@ -1,5 +1,5 @@
 import type { ColumnDef } from "@tanstack/react-table";
-import type { Category, CategoryStatus } from "@/types/category";
+import type { Category } from "@/types/category";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,13 +15,14 @@ import { ArrowUpDown, MoreHorizontal } from "lucide-react";
 interface CategoryColumnsProps {
   onEdit: (category: Category) => void;
   onDelete: (id: string) => void;
+  onViewProducts: (category: Category) => void;
 }
 
 export const createCategoryColumns = ({
   onEdit,
   onDelete,
+  onViewProducts,
 }: CategoryColumnsProps): ColumnDef<Category>[] => [
-  // --- COLUMNA: Nombre ---
   {
     accessorKey: "name",
     header: ({ column }) => (
@@ -37,50 +38,34 @@ export const createCategoryColumns = ({
       <span className="font-medium">{row.getValue("name")}</span>
     ),
   },
-
-  // --- COLUMNA: Subcategorías ---
   {
-    accessorKey: "subcategoryCount",
+    id: "subcategories",
     header: "Subcategorías",
     cell: ({ row }) => (
       <span className="text-muted-foreground">
-        {row.getValue<number>("subcategoryCount")} subcategorías
+        {row.original.subcategories?.length ?? 0} subcategorías
       </span>
     ),
   },
-
-  // --- COLUMNA: Total productos ---
   {
-    accessorKey: "totalProducts",
-    header: ({ column }) => (
-      <Button
-        variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
-        Total productos
-        <ArrowUpDown className="ml-2 h-4 w-4" />
-      </Button>
-    ),
+    id: "totalProducts",
+    header: "Productos",
     cell: ({ row }) => (
-      <span>{row.getValue<number>("totalProducts")} productos</span>
+      <span>{row.original._count?.products ?? 0} productos</span>
     ),
   },
-
-  // --- COLUMNA: Estado ---
   {
     accessorKey: "status",
     header: "Estado",
     cell: ({ row }) => {
-      const status = row.getValue<CategoryStatus>("status");
+      const status = row.getValue<string>("status");
       return (
-        <Badge variant={status === "activo" ? "default" : "secondary"}>
-          {status === "activo" ? "Activo" : "Inactivo"}
+        <Badge variant={status === "active" ? "default" : "secondary"}>
+          {status === "active" ? "Activo" : "Inactivo"}
         </Badge>
       );
     },
   },
-
-  // --- COLUMNA: Acciones ---
   {
     id: "actions",
     header: "Acciones",
@@ -96,12 +81,13 @@ export const createCategoryColumns = ({
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Acciones</DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => onViewProducts(category)}>
+              Ver productos
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onEdit(category)}>
               Editar categoría
             </DropdownMenuItem>
-            <DropdownMenuItem>Ver productos</DropdownMenuItem>
             <DropdownMenuSeparator />
-            {/* Abre el AlertDialog pasando el id — NO elimina directo */}
             <DropdownMenuItem
               className="text-red-600"
               onClick={() => onDelete(category.id)}

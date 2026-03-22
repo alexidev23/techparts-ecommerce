@@ -1,17 +1,18 @@
-export type CategoryStatus = "activo" | "inactivo";
+export type CategoryStatus = "active" | "inactive";
 
 export interface Category {
   id: string;
   name: string;
-  subcategoryCount: number; // cantidad de subcategorías
-  totalProducts: number; // total de productos en esta categoría
   status: CategoryStatus;
+  subcategories: Subcategory[];
+  _count: { products: number };
 }
 
 export interface Subcategory {
   id: string;
   name: string;
-  parentCategory: string; // nombre de la categoría principal
-  totalProducts: number;
   status: CategoryStatus;
+  categoryId: string;
+  category?: { id: string; name: string };
+  _count?: { products: number };
 }

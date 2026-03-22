@@ -72,6 +72,24 @@ export interface AdminProduct {
   images: { id: string; url: string; order: number }[];
 }
 
+export interface AdminCategory {
+  id: string;
+  name: string;
+  status: string;
+  createdAt: string;
+  subcategories: AdminSubcategory[];
+  _count: { products: number };
+}
+
+export interface AdminSubcategory {
+  id: string;
+  name: string;
+  status: string;
+  categoryId: string;
+  category?: { id: string; name: string };
+  _count?: { products: number };
+}
+
 export const adminService = {
   async getStats(): Promise<AdminStats> {
     const response = await api.get<AdminStats>("/admin/stats");
@@ -147,6 +165,61 @@ export const adminService = {
     }>,
   ): Promise<AdminProduct> {
     const response = await api.put<AdminProduct>(`/products/${id}`, data);
+    return response.data;
+  },
+
+  // Agregá estos métodos al objeto adminService
+  async getCategories(): Promise<AdminCategory[]> {
+    const response = await api.get<AdminCategory[]>("/admin/categories");
+    return response.data;
+  },
+
+  async updateCategory(
+    id: string,
+    data: { name?: string; status?: string },
+  ): Promise<AdminCategory> {
+    const response = await api.put<AdminCategory>(`/categories/${id}`, data);
+    return response.data;
+  },
+
+  async deleteCategory(id: string): Promise<void> {
+    await api.delete(`/admin/categories/${id}`);
+  },
+
+  async getSubcategories(): Promise<AdminSubcategory[]> {
+    const response = await api.get<AdminSubcategory[]>("/admin/subcategories");
+    return response.data;
+  },
+
+  async deleteSubcategory(id: string): Promise<void> {
+    await api.delete(`/admin/subcategories/${id}`);
+  },
+
+  async getProductsByCategory(categoryId: string): Promise<
+    {
+      id: string;
+      name: string;
+      stock: number;
+      status: string;
+    }[]
+  > {
+    const response = await api.get(`/admin/categories/${categoryId}/products`);
+    return response.data;
+  },
+
+  async createCategory(name: string): Promise<AdminCategory> {
+    const response = await api.post<AdminCategory>("/categories", { name });
+    return response.data;
+  },
+
+  async createSubcategory(
+    name: string,
+    categoryId: string,
+  ): Promise<AdminSubcategory> {
+    const response = await api.post<AdminSubcategory>(
+      `/categories/${categoryId}/subcategories`,
+      { name },
+    );
     return response.data;
   },
 };

@@ -19,9 +19,11 @@ import ProductsTabs from "@/components/AdminDashboard/tabs/productsTabs/Products
 import SponsorsTab from "@/components/AdminDashboard/tabs/sponsorsTab/SponsorsTab";
 import {
   adminService,
+  type AdminCategory,
   type AdminOrder,
   type AdminProduct,
   type AdminStats,
+  type AdminSubcategory,
   type AdminUser,
 } from "@/services/adminService";
 import { useSearchParams } from "react-router-dom";
@@ -53,21 +55,35 @@ export default function AdminDashboard() {
   const activeTab = searchParams.get("tab") ?? "general";
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [adminProducts, setAdminProducts] = useState<AdminProduct[]>([]);
+  const [adminCategories, setAdminCategories] = useState<AdminCategory[]>([]);
+  const [adminSubcategories, setAdminSubcategories] = useState<
+    AdminSubcategory[]
+  >([]);
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [statsData, usersData, ordersData, productsData] =
-          await Promise.all([
-            adminService.getStats(),
-            adminService.getUsers(),
-            adminService.getOrders(),
-            adminService.getProducts(),
-          ]);
+        const [
+          statsData,
+          usersData,
+          ordersData,
+          productsData,
+          categoriesData,
+          subcategoriesData,
+        ] = await Promise.all([
+          adminService.getStats(),
+          adminService.getUsers(),
+          adminService.getOrders(),
+          adminService.getProducts(),
+          adminService.getCategories(),
+          adminService.getSubcategories(),
+        ]);
         setStats(statsData);
         setUsers(usersData);
         setOrders(ordersData);
         setAdminProducts(productsData);
+        setAdminCategories(categoriesData);
+        setAdminSubcategories(subcategoriesData);
       } catch (error) {
         console.error("Error al obtener estadísticas:", error);
       } finally {
@@ -88,7 +104,14 @@ export default function AdminDashboard() {
         onProductsChange={setAdminProducts}
       />
     ),
-    categorias: <CategoriesTab />,
+    categorias: (
+      <CategoriesTab
+        categories={adminCategories}
+        subcategories={adminSubcategories}
+        onCategoriesChange={setAdminCategories}
+        onSubcategoriesChange={setAdminSubcategories}
+      />
+    ),
     sponsors: <SponsorsTab />,
   };
 
