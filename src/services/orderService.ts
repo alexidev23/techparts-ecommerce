@@ -27,4 +27,12 @@ export const orderService = {
     const response = await api.get<Order[]>("/orders/my-orders");
     return response.data;
   },
+
+  async create(data: {
+    shippingAddress: string;
+    items: { productId: string; quantity: number }[];
+  }): Promise<Order> {
+    const response = await api.post<Order>("/orders", data);
+    return response.data;
+  },
 };

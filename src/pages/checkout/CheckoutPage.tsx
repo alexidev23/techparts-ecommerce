@@ -1,13 +1,7 @@
 import { useMemo, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import {
-  CreditCard,
-  Truck,
-  CheckCircle2,
-  ChevronLeft,
-  Loader2,
-} from "lucide-react";
+import { Truck, CheckCircle2, ChevronLeft, Loader2 } from "lucide-react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -26,24 +20,14 @@ import {
 import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
 import { formatPrice } from "@/utils/formatters";
-import {
-  createMPPreference,
-  getMPCheckoutUrl,
-  type MPPreferenceData,
-} from "@/services/mercadopago";
+import api from "@/lib/axios";
+import { orderService } from "@/services/orderService";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const PAYMENT_LABELS: Record<string, string> = {
-  "credit-card": "Tarjeta de crédito/débito",
-  transfer: "Transferencia bancaria",
-  mercadopago: "Mercado Pago",
-};
-
 const STEPS = [
   { num: 1, label: "Envío" },
-  { num: 2, label: "Pago" },
-  { num: 3, label: "Confirmación" },
+  { num: 2, label: "Confirmación" },
 ];
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
@@ -114,11 +98,9 @@ function OrderItem({ image, name, quantity, price }: OrderItemProps) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function CheckoutPage() {
-  const { items, totalPrice, clearCart } = useCart();
-  const navigate = useNavigate();
+  const { items, totalPrice } = useCart();
   const [step, setStep] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState("credit-card");
   const [shippingData, setShippingData] = useState<ShippingFormValues | null>(
     null,
   );
@@ -159,31 +141,21 @@ export default function CheckoutPage() {
     if (!shippingData) return;
     setIsProcessing(true);
     try {
-      const preferenceData: MPPreferenceData = {
+      const order = await orderService.create({
+        shippingAddress: `${shippingData.address}, ${shippingData.city} (${shippingData.postalCode})`,
         items: items.map((item) => ({
-          id: item.product.id,
-          title: item.product.name,
+          productId: item.product.id,
           quantity: item.quantity,
-          unit_price: item.product.price,
-          currency_id: "ARS",
         })),
-        payer: {
-          email: shippingData.email,
-          name: shippingData.firstName,
-          surname: shippingData.lastName,
-          phone: shippingData.phone,
-        },
-        back_urls: {
-          success: `${window.location.origin}/pago/exitoso`,
-          failure: `${window.location.origin}/pago/error`,
-          pending: `${window.location.origin}/pago/pendiente`,
-        },
-        auto_return: "approved",
-      };
+      });
 
-      const preference = await createMPPreference(preferenceData);
-      const checkoutUrl = getMPCheckoutUrl(preference);
-      window.location.href = checkoutUrl;
+      const response = await api.post("/payments/preference", {
+        orderId: order.id,
+      });
+
+      window.location.href = import.meta.env.DEV
+        ? response.data.sandboxInitPoint
+        : response.data.initPoint;
     } catch (error) {
       toast.error("Error al procesar el pago. Intentá nuevamente.");
       console.error("[MP Error]", error);
@@ -191,17 +163,7 @@ export default function CheckoutPage() {
     }
   };
 
-  const handleConfirm = async () => {
-    if (paymentMethod === "mercadopago") {
-      await handleMercadoPago();
-      return;
-    }
-    toast.success("¡Compra realizada con éxito!");
-    clearCart();
-    setTimeout(() => navigate("/"), 2000);
-  };
-
-  if (items.length === 0 && step < 4) {
+  if (items.length === 0) {
     return (
       <main className="min-h-screen bg-slate-50 dark:bg-slate-950">
         <Helmet>
@@ -260,7 +222,7 @@ export default function CheckoutPage() {
                 {s.num}
               </div>
               <span className="ml-2 hidden text-sm md:inline">{s.label}</span>
-              {idx < 2 && (
+              {idx < 1 && (
                 <div
                   className={`mx-2 h-0.5 w-8 md:w-16 ${
                     step > s.num
@@ -288,7 +250,6 @@ export default function CheckoutPage() {
 
                 <form onSubmit={form.handleSubmit(onShippingSubmit)}>
                   <FieldGroup>
-                    {/* Email */}
                     <Controller
                       name="email"
                       control={form.control}
@@ -309,7 +270,6 @@ export default function CheckoutPage() {
                       )}
                     />
 
-                    {/* Nombre y Apellido */}
                     <div className="grid gap-4 md:grid-cols-2">
                       <Controller
                         name="firstName"
@@ -347,7 +307,6 @@ export default function CheckoutPage() {
                       />
                     </div>
 
-                    {/* Teléfono */}
                     <Controller
                       name="phone"
                       control={form.control}
@@ -368,7 +327,6 @@ export default function CheckoutPage() {
                       )}
                     />
 
-                    {/* Dirección */}
                     <Controller
                       name="address"
                       control={form.control}
@@ -388,7 +346,6 @@ export default function CheckoutPage() {
                       )}
                     />
 
-                    {/* Ciudad y Código Postal */}
                     <div className="grid gap-4 md:grid-cols-2">
                       <Controller
                         name="city"
@@ -428,7 +385,6 @@ export default function CheckoutPage() {
                       />
                     </div>
 
-                    {/* Método de envío */}
                     <Controller
                       name="shippingMethod"
                       control={form.control}
@@ -439,7 +395,6 @@ export default function CheckoutPage() {
                             value={field.value}
                             onValueChange={field.onChange}
                             className="mt-3 space-y-3"
-                            aria-invalid={fieldState.invalid}
                           >
                             <div className="flex items-center justify-between rounded-lg border p-4">
                               <div className="flex items-center space-x-2">
@@ -486,65 +441,14 @@ export default function CheckoutPage() {
                   </FieldGroup>
 
                   <Button type="submit" size="lg" className="mt-6 w-full">
-                    Continuar al pago
+                    Continuar
                   </Button>
                 </form>
               </div>
             )}
 
-            {/* Step 2: Payment */}
-            {step === 2 && (
-              <div className="rounded-lg border bg-white p-6 dark:bg-slate-900">
-                <div className="mb-6 flex items-center gap-3">
-                  <CreditCard
-                    className="h-6 w-6 text-blue-600"
-                    aria-hidden="true"
-                  />
-                  <h2 className="text-xl font-semibold">Método de pago</h2>
-                </div>
-
-                <RadioGroup
-                  value={paymentMethod}
-                  onValueChange={setPaymentMethod}
-                  className="space-y-3"
-                >
-                  {Object.entries(PAYMENT_LABELS).map(([value, label]) => (
-                    <div key={value} className="rounded-lg border p-4">
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value={value} id={value} />
-                        <Label
-                          htmlFor={value}
-                          className="cursor-pointer font-medium"
-                        >
-                          {label}
-                        </Label>
-                      </div>
-                    </div>
-                  ))}
-                </RadioGroup>
-
-                <div className="mt-6 flex gap-3">
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    className="flex-1"
-                    onClick={() => setStep(1)}
-                  >
-                    Volver
-                  </Button>
-                  <Button
-                    size="lg"
-                    className="flex-1"
-                    onClick={() => setStep(3)}
-                  >
-                    Continuar
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Step 3: Confirmation */}
-            {step === 3 && shippingData && (
+            {/* Step 2: Confirmation */}
+            {step === 2 && shippingData && (
               <div className="rounded-lg border bg-white p-6 dark:bg-slate-900">
                 <div className="mb-6 flex items-center gap-3">
                   <CheckCircle2
@@ -578,24 +482,13 @@ export default function CheckoutPage() {
 
                   <div>
                     <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
-                      Método de pago
-                    </h3>
-                    <div className="rounded-lg border p-4 text-sm">
-                      <p className="font-medium">
-                        {PAYMENT_LABELS[paymentMethod]}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
                       Productos
                     </h3>
                     <ul className="space-y-3 list-none p-0">
                       {items.map((item) => (
                         <li key={item.product.id}>
                           <OrderItem
-                            image={item.product.image}
+                            image={item.product.imgPrincipal}
                             name={item.product.name}
                             quantity={item.quantity}
                             price={item.product.price}
@@ -606,21 +499,12 @@ export default function CheckoutPage() {
                   </div>
                 </div>
 
-                <div className="mt-6 flex gap-3">
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    className="flex-1"
-                    onClick={() => setStep(2)}
-                    disabled={isProcessing}
-                  >
-                    Volver
-                  </Button>
+                <div className="mt-6 space-y-3">
                   <Button
                     size="lg"
-                    className="flex-1"
+                    className="w-full bg-blue-600 hover:bg-blue-700"
                     disabled={isProcessing}
-                    onClick={handleConfirm}
+                    onClick={handleMercadoPago}
                   >
                     {isProcessing ? (
                       <>
@@ -631,8 +515,17 @@ export default function CheckoutPage() {
                         Procesando...
                       </>
                     ) : (
-                      "Confirmar compra"
+                      "Pagar con Mercado Pago"
                     )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="w-full"
+                    onClick={() => setStep(1)}
+                    disabled={isProcessing}
+                  >
+                    Volver
                   </Button>
                 </div>
               </div>
@@ -649,7 +542,7 @@ export default function CheckoutPage() {
                   <li key={item.product.id} className="flex gap-3">
                     <div className="h-16 w-16 shrink-0 overflow-hidden rounded border">
                       <img
-                        src={item.product.image}
+                        src={item.product.imgPrincipal}
                         alt={item.product.name}
                         className="h-full w-full object-cover"
                         width={64}
