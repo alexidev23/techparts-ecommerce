@@ -14,7 +14,7 @@ import { useRequireAuth } from "@/hook/useRequireAuth";
 import { productService } from "@/services/productService";
 import { favoriteService } from "@/services/favoriteService";
 import { useAuth } from "@/hook/useAuth";
-import { SHIPPING_FEATURES } from "@/data/products";
+import { SHIPPING_FEATURES } from "@/data/shippingData";
 import { formatPrice } from "@/utils/formatters";
 import type { Product } from "@/types";
 
