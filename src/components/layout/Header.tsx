@@ -29,7 +29,8 @@ import {
 } from "../ui/dropdown-menu";
 import { UserMenu } from "./UserMenu";
 import { useAuth } from "@/hook/useAuth";
-import { categoryService, type Category } from "@/services/categoryService";
+import { categoryService } from "@/services/categoryService";
+import type { Category } from "@/types/category";
 
 export function Header() {
   const { totalItems } = useCart();

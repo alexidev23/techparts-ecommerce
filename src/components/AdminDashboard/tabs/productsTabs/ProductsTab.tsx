@@ -8,7 +8,8 @@ import { ProductViewModal } from "./ProductViewModal";
 import { ProductEditModal } from "./ProductEditModal";
 import { ProductAddModal } from "./ProductAddModal";
 import { adminService, type AdminProduct } from "@/services/adminService";
-import { categoryService, type Category } from "@/services/categoryService";
+import { categoryService } from "@/services/categoryService";
+import type { Category } from "@/types/category";
 
 interface ProductsTabsProps {
   products: AdminProduct[];

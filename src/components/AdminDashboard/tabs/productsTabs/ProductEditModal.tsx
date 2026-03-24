@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { AdminProduct } from "@/services/adminService";
-import type { Category } from "@/services/categoryService";
+import type { Category } from "@/types/category";
 
 const editProductSchema = z.object({
   name: z.string().min(1, "El nombre es requerido"),
