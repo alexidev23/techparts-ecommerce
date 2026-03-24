@@ -70,6 +70,12 @@ export default function ProductsPage() {
     fetchProducts();
   }, [urlCategory, searchQuery]);
 
+  // Derivar marcas únicas de los productos cargados
+  const availableBrands = useMemo(() => {
+    const unique = new Set(products.map((p) => p.brand));
+    return Array.from(unique).sort();
+  }, [products]);
+
   const filteredProducts = useMemo<Product[]>(() => {
     let filtered = [...products];
 
@@ -152,7 +158,10 @@ export default function ProductsPage() {
             aria-label="Filtros de productos"
           >
             <div className="sticky top-24 rounded-lg border bg-white p-6 dark:bg-slate-900">
-              <FilterSidebar onFilterChange={handleFilterChange} />
+              <FilterSidebar
+                onFilterChange={handleFilterChange}
+                brands={availableBrands}
+              />
             </div>
           </aside>
 
@@ -182,7 +191,10 @@ export default function ProductsPage() {
                     <SheetTitle>Filtros</SheetTitle>
                   </SheetHeader>
                   <div className="mt-6">
-                    <FilterSidebar onFilterChange={handleFilterChange} />
+                    <FilterSidebar
+                      onFilterChange={handleFilterChange}
+                      brands={availableBrands}
+                    />
                   </div>
                 </SheetContent>
               </Sheet>

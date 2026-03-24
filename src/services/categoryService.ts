@@ -1,13 +1,5 @@
-import api from "@/lib/axios";
-
-export interface Category {
-  id: string;
-  name: string;
-  subcategories: {
-    id: string;
-    name: string;
-  }[];
-}
+import api from "@/lib/axios"; // ← importar desde types, no redefinir
+import type { Category } from "@/types/category";
 
 export const categoryService = {
   async getAll(): Promise<Category[]> {
